@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Bugging</title>
+    </head>
+    
+    <body>
+        <h1>Bugging</h1>
+        <h2>※このゲームは合法です</h2>
+
+        <div>
+            <button id="main1" onclick="location.href='https://nctzenwish-japan.smtown-fc.jp'">ポーカー</button>
+            <button id="main2" onclick="location.href='https://ja.wikipedia.org/wiki/サクヤ'">大富豪</button>
+            <button id="main3" onclick="location.href='https://www.san-x.co.jp/ja/special/goods_2026_04_rk/'">スロット</button>
+            <button id="main4" onclick="location.href='https://www.sanrio.co.jp/characters/sugarbunnies/'">ブラックジャック</button>
+        </div>
+
+    </body>
+
+    <style>
+        /* 背景を黒に設定 */
+        body {
+            background-color: black;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            font-size: 5em;
+            text-align: center;
+            line-height: 1.2em;
+            font-weight: bold;
+            color: transparent;
+            background: repeating-linear-gradient(0deg, #B67B03 0.1em, #DAAF08 0.2em, #FEE9A0 0.3em, #DAAF08 0.4em, #B67B03 0.5em); 
+            -webkit-background-clip: text;
+            background-clip: text;
+            filter: drop-shadow(5px 5px 5px #ffffff);
+        }
+
+        h2 {
+            font-size: 0.5em;
+            text-align: right;
+            color: white;
+            padding-right: 20px;
+        }
+
+        /* ボタン全体の共通設定 */
+        button {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 15px;
+            border-radius: 50%;
+            border: 4px solid #000; /* 外側の黒い縁取り */
+            font-size: 22px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+
+        /* ボタンクリック時の動作 */
+        button:active {
+            transform: translate(4px, 4px);
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.6);
+        }
+
+        /* 各ボタンの扇形デザイン（中心の白円 + 扇形グラデーション） */
+        
+        #main1 {
+            color: #008b8b;
+            background: 
+                radial-gradient(circle, #fff 55%, transparent 56%),
+                repeating-conic-gradient(aqua 0deg 15deg, #008b8b 15deg 30deg);
+        }
+
+        #main2 {
+            color: #4d9900;
+            background: 
+                radial-gradient(circle, #fff 55%, transparent 56%),
+                repeating-conic-gradient(chartreuse 0deg 15deg, #4d9900 15deg 30deg);
+        }
+
+        #main3 {
+            color: #b84a3a;
+            background: 
+                radial-gradient(circle, #fff 55%, transparent 56%),
+                repeating-conic-gradient(coral 0deg 15deg, #b84a3a 15deg 30deg);
+        }
+
+        #main4 {
+            color: #b30059;
+            background: 
+                radial-gradient(circle, #fff 55%, transparent 56%),
+                repeating-conic-gradient(deeppink 0deg 15deg, #b30059 15deg 30deg);
+        }
+
+        div {
+            text-align: center;
+            margin-top: 50px;
+        }
+    </style>
+</html>
