@@ -1,1 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>簡易版 大富豪</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>簡易版 大富豪</h1>
+    
+    <div id="game-container">
+        <div id="revolution-status" style="font-weight: bold; color: yellow; margin-bottom: 10px;"></div>
+        <div id="opponent-area">相手の手札: <span id="cpu-count">13</span>枚</div>
+        
+        <div id="field-area">
+            <p>場に出ているカード</p>
+            <div id="field-cards"></div>
+        </div>
 
+        <div id="player-area">
+            <p>あなたの手札</p>
+            <div id="player-hand" class="hand"></div>
+        </div>
+
+        <div id="controls">
+            <button id="play-btn">出す</button>
+            <button id="pass-btn">パス</button>
+            <p id="msg"></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
