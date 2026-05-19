@@ -315,6 +315,7 @@ body {
 
 /* テーブル */
 .table {
+  position: relative;
   flex: 1;
   width: 100%;
   max-width: 900px;
@@ -662,12 +663,176 @@ body.fx-shake-bust {
   animation: screenShake 0.55s ease;
 }
 
-.player-area.fx-cards-bust .card {
+.player-area.fx-cards-bust .card,
+.dealer-area.fx-cards-bust .card {
   animation: cardBust 0.6s ease forwards;
 }
 
-.player-area.fx-cards-bj .card {
+.player-area.fx-cards-bj .card,
+.dealer-area.fx-cards-bj .card {
   animation: cardBlackjack 1s ease forwards;
+}
+
+.dealer-area.fx-shake-bust {
+  animation: screenShake 0.55s ease;
+}
+
+.fx-banner.dealer-bust-banner {
+  color: #ff7a8a;
+  font-size: clamp(2rem, 8vw, 3.5rem);
+}
+
+.fx-banner.dealer-bj-banner {
+  color: #ff9eb0;
+  text-shadow:
+    0 0 20px rgba(255, 120, 140, 0.9),
+    0 0 50px rgba(180, 40, 60, 0.7),
+    4px 4px 0 var(--wine-dark);
+}
+
+.hud-block.right {
+  position: relative;
+}
+
+.btn-sound {
+  display: block;
+  margin-top: 0.25rem;
+  margin-left: auto;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.9rem;
+  background: transparent;
+  border: 1px solid var(--felt-edge);
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.btn-sound:hover {
+  opacity: 1;
+  border-color: var(--gold-dark);
+}
+
+.btn-sound.muted {
+  opacity: 0.45;
+}
+
+.sound-preset-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  justify-content: center;
+}
+
+.preset-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+}
+
+.btn-preset {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--felt-edge);
+  border-radius: 4px;
+  background: rgba(26, 10, 12, 0.8);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.btn-preset.active {
+  border-color: var(--gold);
+  color: var(--gold-light);
+  box-shadow: 0 0 8px rgba(212, 168, 75, 0.35);
+}
+
+.chip-allin {
+  width: auto;
+  min-width: 64px;
+  border-radius: 28px;
+  padding: 0 0.5rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  background: radial-gradient(circle at 30% 30%, #ff6b7a, #8b1a2a);
+  color: #fff;
+  border-color: #ff8a96;
+}
+
+.chip-allin.selected {
+  box-shadow: 0 0 0 3px rgba(255, 107, 122, 0.8);
+}
+
+/* 緊張スロー・ざわざわ */
+#game-screen.tension-mode #game-table {
+  filter: saturate(0.85) brightness(0.92);
+  transition: filter 0.4s ease;
+}
+
+#game-screen.tension-mode .card {
+  animation-duration: 0.55s;
+}
+
+.zawazawa-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(20, 5, 10, 0.55) 0%, rgba(10, 2, 5, 0.85) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: zawaFade 1.6s ease forwards;
+}
+
+.zaw-text {
+  font-family: var(--font-serif);
+  font-size: clamp(1.5rem, 6vw, 2.5rem);
+  color: rgba(255, 200, 210, 0.9);
+  text-shadow: 0 0 20px rgba(255, 80, 100, 0.6);
+  letter-spacing: 0.3em;
+  animation: zawaPulse 0.45s ease-in-out infinite alternate;
+}
+
+.zaw-text.zaw-delay {
+  font-size: clamp(1.2rem, 5vw, 2rem);
+  margin-top: 0.5rem;
+  animation-delay: 0.2s;
+  opacity: 0.85;
+}
+
+.zawazawa-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 2px,
+    rgba(255, 255, 255, 0.02) 2px,
+    rgba(255, 255, 255, 0.02) 4px
+  );
+  animation: zawaScan 0.12s linear infinite;
+}
+
+@keyframes zawaFade {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes zawaPulse {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes zawaScan {
+  from { transform: translateX(-4px); }
+  to { transform: translateX(4px); }
 }
 
 @keyframes bustFlash {

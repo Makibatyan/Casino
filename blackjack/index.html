@@ -40,10 +40,16 @@
       <div class="hud-block center">
         <span class="hud-label">今回の獲得</span>
         <span id="session-coins" class="hud-value accent">0</span>
+        <div class="sound-preset-row">
+          <span class="preset-label">音質</span>
+          <button type="button" id="btn-preset-a" class="btn-preset" title="やや控えめ">A</button>
+          <button type="button" id="btn-preset-e" class="btn-preset active" title="リアル（推奨）">E</button>
+        </div>
       </div>
       <div class="hud-block right">
         <span class="hud-label">連勝</span>
         <span id="win-streak" class="hud-value">0</span>
+        <button type="button" id="btn-sound" class="btn-sound" aria-pressed="true" title="効果音のオン/オフ">🔊</button>
       </div>
     </header>
 
@@ -52,8 +58,8 @@
       <p id="kaiji-dialogue" class="kaiji-dialogue">「さあ、賭けの時間だ…」</p>
     </section>
 
-    <main class="table">
-      <section class="hand-area dealer-area">
+    <main id="game-table" class="table">
+      <section id="dealer-area" class="hand-area dealer-area">
         <h2>ディーラー <span id="dealer-score" class="score"></span></h2>
         <div id="dealer-cards" class="cards"></div>
       </section>
@@ -70,6 +76,7 @@
             <button type="button" class="chip" data-bet="1000">1K</button>
             <button type="button" class="chip" data-bet="2500">2.5K</button>
             <button type="button" class="chip" data-bet="5000">5K</button>
+            <button type="button" class="chip chip-allin" data-bet="allin">ALL IN</button>
           </div>
           <div class="bet-custom">
             <input type="number" id="custom-bet" min="1" placeholder="任意額" step="50">
@@ -104,6 +111,7 @@
     </div>
   </div>
 
+  <script src="sounds.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
