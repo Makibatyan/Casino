@@ -135,46 +135,65 @@ class PokerGame {
 
 /*イマココ */
 
-    playerCall() {
-        const callAmount = this.currentBet - this.playerBet;   //
-        // チップ不足チェックは削除（オールインを許可）
+playerCall() {
+        // コールに必要な「追加の」額を計算
+        const callAmount = this.currentBet - this.playerBet;
         
-        if (callAmount === 0) {
+        if (callAmount <= 0) {
             this.updateGameStatus('コールする必要はありません。チェックもしくはレイズしてください。');
             return;
         }
         
+        // 実際に支払える額（手持ちチップが足りない場合はオールイン）
         const actualCallAmount = Math.min(callAmount, this.playerChips);
+        
+        // チップの減算とポットへの追加
         this.playerChips = Math.max(0, this.playerChips - actualCallAmount);
         this.pot += actualCallAmount;
-        this.playerBet = actualCallAmount;
+        
+        // 【修正点1】playerBetは「このラウンドの総ベット額」にするため、追加分を足す（またはcurrentBetに合わせる）
+        this.playerBet += actualCallAmount;
         
         // オールイン時の余剰分処理
         if (actualCallAmount < callAmount) {
-            const surplus = callAmount - actualCallAmount;
+            const surplus = callAmount - actualCallAmount; // 60 - 30 = 30
+            
+            // 1. CPUの手持ちに返す
             this.computerChips += surplus;
+            
+            // 2. 【追加】ポットからもその余剰分を引く！
+            this.pot -= surplus; 
+            
+            // 3. お互いのベット額の「着地点」を、プレイヤーが全賭けした額（70）に合わせる
+            this.playerBet = this.playerBet; //（これはそのままでOK、70の状態）
+            this.computerBet = this.playerBet; // CPUのベット額を 70 に下げる
+            this.currentBet = this.playerBet;  // 全体の最高ベット額も 70 に下げる
+            
             setTimeout(() => {
                 this.updateGameStatus(`${actualCallAmount}チップでオールイン！余剰の${surplus}チップをCPUに返却しました。`);
             }, 800);
-        } else {
+        }else {
             setTimeout(() => {
                 this.updateGameStatus(`${callAmount}チップコールしました。`);
-            }, 800);
+            }, 1000);
         }
         
+        this.updateUI();
+        this.disableBettingButtons(); // アクション確定のためボタン無効化
+        
+        setTimeout(() => {   
+            // 現在のプレイヤー（プレイヤー=0）のアクションを完了にする
+            this.hasActedThisRound[0] = true;
 
-       this.updateUI();
-    this.disableBettingButtons();  // ここで「アクションした」という事実を確定させてから判定
-    setTimeout(() => {   
-        // 移動した後に、ラウンドが終わったかどうかをチェック
-        if (this.checkAllPlayersActed()) {
-             this.checkBettingRoundComplete();
-        }else {
-            this.nextPlayer();
-        }
+            // 【修正点2】全員のアクション完了とベット額の一致を正しく判定して分岐
+            if (this.checkAllPlayersActed() && this.playerBet === this.computerBet) {
+                this.checkBettingRoundComplete(); // 次のフェーズへ
+            } else {
+                this.nextPlayer(); // ターン交代
+            }
+        }, 800);
+    }
 
-    }, 800);
-}
 
     showRaiseControls() {
         document.getElementById('betControls').style.display = 'flex';
