@@ -126,6 +126,11 @@ const els = {
   finalBankroll: document.getElementById("final-bankroll"),
   finalSession: document.getElementById("final-session"),
   gameoverQuote: document.getElementById("gameover-quote"),
+  maxBet: document.getElementById("max-bet"),
+  betError: document.getElementById("bet-error"),
+  fxOverlay: document.getElementById("fx-overlay"),
+  gameScreen: document.getElementById("game-screen"),
+  playerArea: document.getElementById("player-area"),
 };
 
 // --- ユーティリティ ---
@@ -156,6 +161,100 @@ function showCoinPopup(amount, isWin) {
   pop.textContent = isWin ? `+${formatCoins(amount)}` : `-${formatCoins(Math.abs(amount))}`;
   document.body.appendChild(pop);
   setTimeout(() => pop.remove(), 1200);
+}
+
+function setBetError(msg) {
+  els.betError.textContent = msg || "";
+}
+
+function updateBetUI() {
+  const max = bankroll;
+  els.maxBet.textContent = formatCoins(max);
+  els.customBet.max = max;
+  els.customBet.min = max > 0 ? 1 : 0;
+
+  document.querySelectorAll(".chip").forEach((chip) => {
+    const amount = parseInt(chip.dataset.bet, 10);
+    const overLimit = amount > max;
+    chip.disabled = overLimit || max <= 0;
+    if (overLimit) chip.classList.remove("selected");
+  });
+
+  if (pendingBet > max) {
+    pendingBet = max > 0 ? max : 0;
+    document.querySelectorAll(".chip").forEach((ch) => {
+      ch.classList.toggle("selected", parseInt(ch.dataset.bet, 10) === pendingBet);
+    });
+  }
+
+  const customVal = parseInt(els.customBet.value, 10);
+  if (!Number.isNaN(customVal) && customVal > max) {
+    els.customBet.classList.add("input-error");
+  } else {
+    els.customBet.classList.remove("input-error");
+  }
+
+  els.btnPlaceBet.disabled = max <= 0;
+}
+
+function createParticles(type, count = 24) {
+  const container = document.createElement("div");
+  container.className = "fx-particles";
+  const cls = type === "blackjack" ? "gold" : "red";
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement("div");
+    p.className = `fx-particle ${cls}`;
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+    const dist = 80 + Math.random() * 160;
+    p.style.left = "50%";
+    p.style.top = "50%";
+    p.style.setProperty("--tx", `${Math.cos(angle) * dist}px`);
+    p.style.setProperty("--ty", `${Math.sin(angle) * dist}px`);
+    p.style.animationDelay = `${Math.random() * 0.2}s`;
+    container.appendChild(p);
+  }
+  return container;
+}
+
+function playSpecialEffect(type) {
+  return new Promise((resolve) => {
+    const overlay = els.fxOverlay;
+    overlay.innerHTML = "";
+    overlay.classList.add("active");
+    overlay.setAttribute("aria-hidden", "false");
+
+    const flash = document.createElement("div");
+    flash.className = `fx-flash ${type === "blackjack" ? "bj-flash" : "bust-flash"}`;
+    overlay.appendChild(flash);
+    overlay.appendChild(createParticles(type));
+
+    const banner = document.createElement("div");
+    banner.className = `fx-banner ${type === "blackjack" ? "bj-banner" : "bust-banner"}`;
+    banner.textContent = type === "blackjack" ? "BLACKJACK!" : "BUST!";
+    overlay.appendChild(banner);
+
+    const sub = document.createElement("div");
+    sub.className = `fx-sub ${type === "blackjack" ? "bj-sub" : "bust-sub"}`;
+    sub.textContent = type === "blackjack" ? "21 — 運命の一手" : "21超過 — 敗北";
+    overlay.appendChild(sub);
+
+    if (type === "bust") {
+      els.gameScreen.classList.add("fx-shake-bust");
+      els.playerArea.classList.add("fx-cards-bust");
+    } else {
+      els.playerArea.classList.add("fx-cards-bj");
+    }
+
+    const duration = type === "blackjack" ? 1500 : 1200;
+    setTimeout(() => {
+      overlay.classList.remove("active");
+      overlay.setAttribute("aria-hidden", "true");
+      overlay.innerHTML = "";
+      els.gameScreen.classList.remove("fx-shake-bust");
+      els.playerArea.classList.remove("fx-cards-bust", "fx-cards-bj");
+      resolve();
+    }, duration);
+  });
 }
 
 function updateHUD() {
@@ -265,26 +364,35 @@ function showBetPanel(show) {
 
 // --- ベット ---
 function selectChip(amount) {
+  setBetError("");
+  if (amount > bankroll) {
+    setBetError(`所持コイン（${formatCoins(bankroll)}）を超えるベットはできません`);
+    return;
+  }
   pendingBet = amount;
   document.querySelectorAll(".chip").forEach((ch) => {
     ch.classList.toggle("selected", parseInt(ch.dataset.bet, 10) === amount);
   });
   els.customBet.value = "";
+  els.customBet.classList.remove("input-error");
 }
 
 function placeBet() {
+  setBetError("");
   const custom = parseInt(els.customBet.value, 10);
-  let bet = custom > 0 ? custom : pendingBet;
+  let bet = !Number.isNaN(custom) && custom > 0 ? custom : pendingBet;
 
   if (bet <= 0) {
-    els.gameMessage.textContent = "ベット額を選んでください";
+    setBetError("ベット額を選んでください");
     return;
   }
   if (bet > bankroll) {
-    bet = bankroll;
+    setBetError(`所持コイン（${formatCoins(bankroll)}）を超えるベットはできません`);
+    els.customBet.classList.add("input-error");
+    return;
   }
-  if (bet < 1) {
-    els.gameMessage.textContent = "ベットできません";
+  if (bankroll < 1) {
+    setBetError("ベットできるコインがありません");
     return;
   }
 
@@ -317,7 +425,7 @@ function startRound() {
   const dealerBJ = isBlackjack(dealerHand);
 
   if (playerBJ || dealerBJ) {
-    revealAndSettle(playerBJ, dealerBJ);
+    void revealAndSettle(playerBJ, dealerBJ);
     return;
   }
 
@@ -337,7 +445,7 @@ function hit() {
 
   const val = handValue(playerHand);
   if (val > 21) {
-    endRound("bust", 0);
+    void endRound("bust", 0);
   } else if (val === 21) {
     stand();
   } else {
@@ -366,7 +474,7 @@ function doubleDown() {
 
   const val = handValue(playerHand);
   if (val > 21) {
-    endRound("bust", 0);
+    void endRound("bust", 0);
   } else {
     dealerTurn();
   }
@@ -398,41 +506,49 @@ function delay(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function revealAndSettle(playerBJ, dealerBJ) {
+async function revealAndSettle(playerBJ, dealerBJ) {
   renderHands(false);
   phase = "ended";
 
   if (playerBJ && dealerBJ) {
-    endRound("push", currentBet);
+    await endRound("push", currentBet);
   } else if (playerBJ) {
     const payout = Math.floor(currentBet * 2.5);
-    endRound("blackjack", payout);
+    await endRound("blackjack", payout);
   } else if (dealerBJ) {
-    endRound("lose", 0);
+    await endRound("lose", 0);
   }
 }
 
-function settleRound() {
+async function settleRound() {
   const pVal = handValue(playerHand);
   const dVal = handValue(dealerHand);
 
   if (dVal > 21) {
-    endRound("dealerBust", currentBet * 2);
+    await endRound("dealerBust", currentBet * 2);
   } else if (pVal > dVal) {
-    endRound("win", currentBet * 2);
+    await endRound("win", currentBet * 2);
   } else if (pVal < dVal) {
-    endRound("lose", 0);
+    await endRound("lose", 0);
   } else {
-    endRound("push", currentBet);
+    await endRound("push", currentBet);
   }
 }
 
-function endRound(result, payout) {
+async function endRound(result, payout) {
   phase = "ended";
   renderHands(false);
+  setControls({ hit: false, stand: false, double: false, newRound: false });
+
+  if (result === "bust") {
+    await playSpecialEffect("bust");
+  } else if (result === "blackjack") {
+    await playSpecialEffect("blackjack");
+  }
+
   setControls({ hit: false, stand: false, double: false, newRound: true });
 
-  let net = payout - (result === "push" ? 0 : 0);
+  let net = 0;
   let message = "";
   let kaijiCategory = "lose";
 
@@ -526,6 +642,8 @@ function newRound() {
   els.currentBet.textContent = "0";
   els.gameMessage.textContent = "";
   els.customBet.value = "";
+  els.customBet.classList.remove("input-error");
+  setBetError("");
   document.querySelectorAll(".chip").forEach((ch) => ch.classList.remove("selected"));
 
   playerHand = [];
@@ -536,6 +654,7 @@ function newRound() {
   els.dealerScore.textContent = "";
 
   showBetPanel(true);
+  updateBetUI();
   setControls({ hit: false, stand: false, double: false, newRound: false });
   setKaijiLine("bet");
 }
@@ -571,8 +690,22 @@ els.btnNewRound.addEventListener("click", newRound);
 
 document.querySelectorAll(".chip").forEach((chip) => {
   chip.addEventListener("click", () => {
+    if (chip.disabled) return;
     selectChip(parseInt(chip.dataset.bet, 10));
   });
+});
+
+els.customBet.addEventListener("input", () => {
+  setBetError("");
+  const val = parseInt(els.customBet.value, 10);
+  if (!Number.isNaN(val) && val > bankroll) {
+    els.customBet.classList.add("input-error");
+    setBetError(`最大 ${formatCoins(bankroll)} コインまで`);
+  } else {
+    els.customBet.classList.remove("input-error");
+    pendingBet = 0;
+    document.querySelectorAll(".chip").forEach((ch) => ch.classList.remove("selected"));
+  }
 });
 
 // スタート画面のセリフローテーション
