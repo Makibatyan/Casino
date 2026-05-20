@@ -30,5 +30,8 @@ blackjack/
     ├── coin-high.mp3
     ├── card-flip.mp3
     ├── voice-blackjack.mp3
-    └── voice-bust.mp3
+    ├── voice-bust.mp3
+    ├── voice-win.mp3
+    ├── voice-lose.mp3
+    └── voice-even.mp3
 ```

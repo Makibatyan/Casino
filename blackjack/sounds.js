@@ -7,6 +7,9 @@ const SOUND_FILES = {
   cardFlip: "sounds/card-flip.mp3",
   voiceBlackjack: "sounds/voice-blackjack.mp3",
   voiceBust: "sounds/voice-bust.mp3",
+  voiceWin: "sounds/voice-win.mp3",
+  voiceLose: "sounds/voice-lose.mp3",
+  voiceEven: "sounds/voice-even.mp3",
 };
 
 const Sound = {
@@ -65,6 +68,61 @@ const Sound = {
     const audio = template.cloneNode();
     audio.volume = Math.min(1, Math.max(0, volume));
     return audio.play().catch(() => {});
+  },
+
+  /** リバーブ用インパルス（ホール響き） */
+  _createReverbImpulse(duration = 1.6, decay = 2.4) {
+    const rate = this.ctx.sampleRate;
+    const length = Math.floor(rate * duration);
+    const impulse = this.ctx.createBuffer(2, length, rate);
+    for (let c = 0; c < 2; c++) {
+      const ch = impulse.getChannelData(c);
+      for (let i = 0; i < length; i++) {
+        ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+      }
+    }
+    return impulse;
+  },
+
+  /** ボイス再生（軽いホールリバーブ付き） */
+  playVoiceReverb(key, volume = 0.92, delayMs = 0) {
+    if (!this.enabled) return;
+    this.init();
+    const template = this.clips[key];
+    if (!template || !this.ctx) return;
+
+    if (!this._reverbImpulse) {
+      this._reverbImpulse = this._createReverbImpulse();
+    }
+
+    const run = () => {
+      const audio = template.cloneNode();
+      const source = this.ctx.createMediaElementSource(audio);
+
+      const dry = this.ctx.createGain();
+      dry.gain.value = 0.68;
+
+      const convolver = this.ctx.createConvolver();
+      convolver.buffer = this._reverbImpulse;
+
+      const wet = this.ctx.createGain();
+      wet.gain.value = 0.42;
+
+      const out = this.ctx.createGain();
+      out.gain.value = Math.min(1, Math.max(0, volume));
+
+      source.connect(dry);
+      source.connect(convolver);
+      convolver.connect(wet);
+      dry.connect(out);
+      wet.connect(out);
+      out.connect(this.master);
+
+      void audio.play().catch(() => {});
+    };
+
+    if (delayMs > 0) setTimeout(run, delayMs);
+    else run();
   },
 
   isHighTier(tier) {
@@ -195,7 +253,7 @@ const Sound = {
 
   playBlackjack() {
     this.cardFlipSynth(0, 0.85);
-    setTimeout(() => void this.playFile("voiceBlackjack", 0.95), 280);
+    setTimeout(() => this.playVoiceReverb("voiceBlackjack", 0.95), 280);
   },
 
   playBust() {
@@ -207,7 +265,23 @@ const Sound = {
       Q: 0.8,
     });
     this.feltTap(0.06, 0.14);
-    setTimeout(() => void this.playFile("voiceBust", 0.95), 200);
+    setTimeout(() => this.playVoiceReverb("voiceBust", 0.95), 200);
+  },
+
+  playOutcomeWin(tier) {
+    this.playWin(tier);
+    setTimeout(() => this.playVoiceReverb("voiceWin", 0.94), 120);
+  },
+
+  playOutcomeLose() {
+    this.cardPlace(0);
+    void this.playFile("coinLow", 0.32);
+    setTimeout(() => this.playVoiceReverb("voiceLose", 0.94), 160);
+  },
+
+  playOutcomeEven() {
+    this.cardPlace(0);
+    setTimeout(() => this.playVoiceReverb("voiceEven", 0.9), 100);
   },
 
   playZawazawa() {
@@ -275,8 +349,16 @@ const Sound = {
         this.playBlackjack();
         break;
       case "lose":
-        this.cardPlace();
-        void this.playFile("coinLow", 0.35);
+        this.playOutcomeLose();
+        break;
+      case "voiceWin":
+        this.playVoiceReverb("voiceWin", opts.volume ?? 0.94, opts.delayMs ?? 0);
+        break;
+      case "voiceLose":
+        this.playVoiceReverb("voiceLose", opts.volume ?? 0.94, opts.delayMs ?? 0);
+        break;
+      case "voiceEven":
+        this.playVoiceReverb("voiceEven", opts.volume ?? 0.9, opts.delayMs ?? 0);
         break;
       default:
         break;

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>カイジのブラックジャック</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles-fx.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
@@ -12,6 +13,9 @@
 <body>
   <div class="bg-pattern" aria-hidden="true"></div>
   <div id="fx-overlay" class="fx-overlay" aria-hidden="true"></div>
+  <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
+  <div id="screen-transition" class="screen-transition" aria-hidden="true"></div>
+  <div id="vignette-tension" class="vignette-tension" aria-hidden="true"></div>
 
   <!-- スタート画面 -->
   <div id="start-screen" class="screen active">
@@ -52,6 +56,12 @@
         <button type="button" id="btn-sound" class="btn-sound" aria-pressed="true" title="効果音のオン/オフ">🔊</button>
       </div>
     </header>
+
+    <div id="heat-meter" class="heat-meter" aria-label="台の熱">
+      <span class="heat-label-text">台の熱</span>
+      <div class="heat-track"><div id="heat-fill" class="heat-fill"></div></div>
+      <span id="heat-label" class="heat-status">普通</span>
+    </div>
 
     <section class="kaiji-panel" aria-live="polite">
       <div class="kaiji-avatar" aria-hidden="true">開</div>
@@ -112,6 +122,7 @@
   </div>
 
   <script src="sounds.js"></script>
+  <script src="effects.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

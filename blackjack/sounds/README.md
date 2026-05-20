@@ -12,6 +12,9 @@
 | `card-flip.mp3` | ヒット・ダブル（カードめくり） |
 | `voice-blackjack.mp3` | 「Blackjack」ボイス |
 | `voice-bust.mp3` | 「Bust」ボイス |
+| `voice-win.mp3` | 「Win」ボイス（勝利演出） |
+| `voice-lose.mp3` | 「Lose」ボイス（敗北演出） |
+| `voice-even.mp3` | 「Even」ボイス（引き分け演出） |
 
 ## GitHub に公開する場合
 

@@ -83,11 +83,46 @@ const KAIJI_LINES = {
     "「鼓動がうるさい…落ち着け、俺」",
     "「一瞬の判断が、全てを決める——」",
   ],
+  rush: [
+    "「台が熱い…今がチャンスだ！」",
+    "「この流れに乗れ…一気に決める！」",
+  ],
+  recovery: [
+    "「負け続きのあとは…跳ねる」",
+    "「潮目が変わる…感じるぞ」",
+  ],
+  nearMiss: [
+    "「あと一歩…！次は俺の番だ」",
+    "「届かなかった…だが、手応えはある」",
+  ],
+  bonus: [
+    "「熱い…！ボーナスが乗った！」",
+    "「台が吐いた…受け取る！」",
+  ],
+  danger: [
+    "「あと一枚で地獄か天国か…」",
+    "「際どい…だが、ここが勝負師の領域だ」",
+  ],
+  allInEvent: [
+    "「全ツッパ…後戻りはできない」",
+    "「命を賭けるなら、今しかない」",
+  ],
+  standoff: [
+    "「札は出た…あとは相手次第だ」",
+    "「見せてやる、俺のスタンドを」",
+  ],
+  showdown: [
+    "「一瞬で全てが決まる…」",
+    "「この差が、生死を分ける——」",
+  ],
+  doubleDown: [
+    "「倍に賭ける…覚悟はできている」",
+    "「一発勝負だ…引くな、俺」",
+  ],
 };
 
 const DEALER_HIT_DELAY = 650;
 const TENSION_HIT_DELAY = 1550;
-const ZAWAZAWA_CHANCE = 0.18;
 
 const START_QUOTES = KAIJI_LINES.start;
 
@@ -171,8 +206,10 @@ function formatCoins(n) {
 }
 
 function showScreen(name) {
-  Object.values(screens).forEach((s) => s.classList.remove("active"));
-  screens[name].classList.add("active");
+  void FX.screenTransition(() => {
+    Object.values(screens).forEach((s) => s.classList.remove("active"));
+    screens[name].classList.add("active");
+  });
 }
 
 function setKaijiLine(category, forceLine) {
@@ -451,14 +488,17 @@ function isBlackjack(hand) {
 }
 
 // --- 描画 ---
-function renderCard(card, hidden = false) {
+function renderCard(card, hidden = false, animate = false) {
   const el = document.createElement("div");
-  el.className = "card" + (hidden ? " hidden" : "");
-  if (!hidden) {
+  el.className = "card";
+  if (hidden) {
+    el.classList.add("hidden", "card--hole");
+  } else {
     const isRed = RED_SUITS.has(card.suit);
     el.classList.add(isRed ? "red" : "black");
     el.innerHTML = `<span class="rank">${card.rank}</span><span class="suit">${card.suit}</span>`;
   }
+  if (animate) el.classList.add("card-deal");
   return el;
 }
 
@@ -492,10 +532,27 @@ function appendPlayerCard(card) {
 
 // --- フェーズ制御 ---
 function setControls({ hit, stand, double, newRound }) {
-  els.btnHit.disabled = !hit;
-  els.btnStand.disabled = !stand;
-  els.btnDouble.disabled = !double;
-  els.btnNewRound.disabled = !newRound;
+  const apply = (btn, enabled, title) => {
+    btn.disabled = !enabled;
+    btn.title = title;
+    btn.classList.toggle("btn-ready", enabled);
+    btn.classList.toggle("btn-locked", !enabled);
+  };
+
+  apply(els.btnHit, hit, hit ? "カードを1枚引く" : "今はヒットできません");
+  apply(els.btnStand, stand, stand ? "手札を確定する" : "今はスタンドできません");
+  apply(
+    els.btnDouble,
+    double,
+    doubled
+      ? "ダブル済み — 追加カードは1枚のみ"
+      : double
+        ? "ベットを2倍にして1枚だけ引く"
+        : bankroll < currentBet
+          ? "ダブルに必要なコインが足りません"
+          : "今はダブルできません"
+  );
+  apply(els.btnNewRound, newRound, newRound ? "次のラウンドへ" : "ラウンド終了後に押せます");
 }
 
 function showBetPanel(show) {
@@ -533,6 +590,8 @@ function selectAllIn() {
 }
 
 function placeBet() {
+  if (phase !== "betting") return;
+
   setBetError("");
   const custom = parseInt(els.customBet.value, 10);
   let bet = !Number.isNaN(custom) && custom > 0 ? custom : pendingBet;
@@ -551,6 +610,8 @@ function placeBet() {
     return;
   }
 
+  els.btnPlaceBet.disabled = true;
+
   lastBetTier = getBetTier(bet, bankroll);
   currentBet = bet;
   bankroll -= bet;
@@ -559,11 +620,19 @@ function placeBet() {
   setKaijiLine("bet");
   Sound.init();
   Sound.play("bet", { tier: lastBetTier });
-  startRound();
+
+  if (typeof FX !== "undefined") {
+    if (lastBetTier === "allin") FX.eventAllIn();
+    else if (currentBet >= 5000) FX.eventBigBet();
+  }
+
+  void startRound().finally(() => {
+    els.btnPlaceBet.disabled = bankroll <= 0;
+  });
 }
 
 // --- ラウンド開始 ---
-function startRound() {
+async function startRound() {
   phase = "playing";
   doubled = false;
   actionLock = false;
@@ -574,15 +643,16 @@ function startRound() {
 
   playerHand.push(drawCard(), drawCard());
   dealerHand.push(drawCard(), drawCard());
-  Sound.play("deal");
-  Sound.play("deal", { when: 0.1 });
 
   showBetPanel(false);
   els.gameMessage.textContent = "";
-  renderHands(true);
   setKaijiLine("deal");
 
-  // 即時ブラックジャック判定
+  await FX.dealInitialHands(renderCard, playerHand, dealerHand, {
+    playerCards: els.playerCards,
+    dealerCards: els.dealerCards,
+  });
+
   const playerBJ = isBlackjack(playerHand);
   const dealerBJ = isBlackjack(dealerHand);
 
@@ -605,19 +675,21 @@ async function hit() {
   setControls({ hit: false, stand: false, double: false, newRound: false });
 
   setKaijiLine("hit");
-  Sound.play("hit");
   const card = drawCard();
   playerHand.push(card);
-  appendPlayerCard(card);
+  await FX.appendPlayerCardAnimated(renderCard, card);
 
   const val = handValue(playerHand);
   actionLock = false;
   if (val > 21) {
     void endRound("bust", 0);
   } else if (val === 21) {
+    FX.eventLucky21();
     await playPlayer21Effect();
     await stand();
   } else {
+    if (val >= 19 && val <= 20) FX.eventDangerZone(val);
+    else if (val >= 12 && val <= 16 && Math.random() < 0.22) FX.eventRiskyHand(val);
     setControls({
       hit: true,
       stand: true,
@@ -644,12 +716,14 @@ async function doubleDown() {
   els.currentBet.textContent = formatCoins(currentBet);
   updateHUD();
   setKaijiLine("hit");
+  els.gameMessage.textContent = "ダブル — このあとカードは1枚のみ";
+  FX.eventDoubleDown();
 
   await delay(200);
   Sound.play("double");
   const card = drawCard();
   playerHand.push(card);
-  appendPlayerCard(card);
+  await FX.appendPlayerCardAnimated(renderCard, card);
 
   await delay(400);
 
@@ -670,6 +744,8 @@ async function stand() {
   if (phase !== "playing") return;
   setKaijiLine("stand");
   Sound.play("stand");
+  const pVal = handValue(playerHand);
+  if (pVal >= 17 && pVal <= 20) await FX.eventStandoff(pVal);
   await dealerTurn();
 }
 
@@ -677,7 +753,10 @@ async function dealerTurn() {
   phase = "dealer";
   setControls({ hit: false, stand: false, double: false, newRound: false });
 
-  renderHands(false);
+  if (els.dealerCards.querySelector(".card--hole")) {
+    await FX.flipDealerHoleCard();
+    await delay(300);
+  }
 
   try {
     while (dealerShouldHit()) {
@@ -686,12 +765,13 @@ async function dealerTurn() {
       if (chasing && !els.gameMessage.textContent.includes("ざわ")) {
         els.gameMessage.textContent = "ディーラーが勝つためヒット…";
       }
-      Sound.play("dealerHit");
-      dealerHand.push(drawCard());
-      renderHands(false);
+      const card = drawCard();
+      dealerHand.push(card);
+      await FX.appendDealerCardAnimated(renderCard, card);
 
       if (handValue(dealerHand) > 21) {
         setTensionMode(false);
+        FX.tensionEnd();
         await delay(300);
         await settleRound();
         return;
@@ -702,6 +782,7 @@ async function dealerTurn() {
     }
   } finally {
     setTensionMode(false);
+    FX.tensionEnd();
   }
 
   els.gameMessage.textContent = "";
@@ -723,18 +804,6 @@ function setTensionMode(on) {
   els.gameScreen.classList.toggle("tension-mode", on);
 }
 
-async function playZawazawa() {
-  const overlay = document.createElement("div");
-  overlay.className = "zawazawa-overlay";
-  overlay.innerHTML =
-    '<span class="zaw-text">ざわ…</span><span class="zaw-text zaw-delay">ざわざわ……</span>';
-  els.gameTable.appendChild(overlay);
-  setKaijiLine("tension");
-  Sound.play("zawazawa");
-  await delay(1600);
-  overlay.remove();
-}
-
 async function waitDealerHitPause() {
   const tension = isDealerTensionMoment();
   if (!tension) {
@@ -742,16 +811,19 @@ async function waitDealerHitPause() {
     return;
   }
   setTensionMode(true);
+  FX.tensionPulse();
   els.gameMessage.textContent = `ディーラー ${handValue(dealerHand)} → あなた ${handValue(playerHand)}…勝負のカード`;
-  if (Math.random() < ZAWAZAWA_CHANCE) {
-    await playZawazawa();
-  } else {
-    await delay(TENSION_HIT_DELAY);
-  }
+  const betBonus = currentBet >= 2500 ? 0.12 : 0;
+  if (await FX.maybeZawazawa(betBonus)) return;
+  await delay(TENSION_HIT_DELAY);
 }
 
 async function revealAndSettle(playerBJ, dealerBJ) {
-  renderHands(false);
+  if (els.dealerCards.querySelector(".card--hole")) {
+    await FX.flipDealerHoleCard();
+  } else {
+    renderHands(false);
+  }
   phase = "ended";
 
   if (playerBJ && dealerBJ) {
@@ -767,6 +839,8 @@ async function revealAndSettle(playerBJ, dealerBJ) {
 async function settleRound() {
   const pVal = handValue(playerHand);
   const dVal = handValue(dealerHand);
+
+  await FX.eventShowdown(pVal, dVal);
 
   if (dVal > 21) {
     await endRound("dealerBust", currentBet * 2);
@@ -800,7 +874,6 @@ async function endRound(result, payout) {
       winStreak++;
       message = `ブラックジャック！ +${formatCoins(net)} コイン`;
       kaijiCategory = "blackjack";
-      showCoinPopup(net, true);
       if (net >= currentBet * 1.5) setKaijiLine("bigWin");
       break;
     case "win":
@@ -812,8 +885,6 @@ async function endRound(result, payout) {
         ? `21点達成！ +${formatCoins(net)} コイン`
         : `勝利！ +${formatCoins(net)} コイン`;
       kaijiCategory = isTwentyOne(playerHand) ? "blackjack" : "win";
-      showCoinPopup(net, true);
-      if (!fxFlags.player21) Sound.play("win", { tier: lastBetTier });
       if (net >= 5000) setKaijiLine("bigWin");
       break;
     case "dealerBust":
@@ -825,8 +896,6 @@ async function endRound(result, payout) {
         ? `21点 & ディーラーバースト！ +${formatCoins(net)} コイン`
         : `ディーラーバースト！ +${formatCoins(net)} コイン`;
       kaijiCategory = isTwentyOne(playerHand) ? "blackjack" : "dealerBust";
-      showCoinPopup(net, true);
-      if (!fxFlags.player21) Sound.play("win", { tier: lastBetTier });
       break;
     case "push":
       bankroll += payout;
@@ -841,7 +910,6 @@ async function endRound(result, payout) {
       message = `バースト… -${formatCoins(currentBet)} コイン`;
       kaijiCategory = "bust";
       winStreak = 0;
-      showCoinPopup(currentBet, false);
       break;
     case "lose":
     default:
@@ -852,17 +920,38 @@ async function endRound(result, payout) {
         : `敗北… -${formatCoins(currentBet)} コイン`;
       kaijiCategory = "lose";
       winStreak = 0;
-      showCoinPopup(currentBet, false);
-      Sound.play("lose");
       break;
+  }
+
+  const skipOutcomeBanner =
+    result === "bust" ||
+    result === "blackjack" ||
+    ((result === "win" || result === "dealerBust") && fxFlags.player21) ||
+    (result === "lose" && fxFlags.dealer21) ||
+    (result === "push" && (fxFlags.player21 || fxFlags.dealer21));
+
+  await FX.onRoundOutcome(result, net, { skipBanner: skipOutcomeBanner });
+
+  const bonus = FX.onRoundEnd(result, net, {
+    pVal: handValue(playerHand),
+    dVal: handValue(dealerHand),
+    currentBet,
+  });
+  if (bonus > 0) {
+    bankroll += bonus;
+    sessionCoins += bonus;
+    net += bonus;
+    message += ` （熱ボーナス +${formatCoins(bonus)}）`;
   }
 
   els.gameMessage.textContent = message;
   setKaijiLine(kaijiCategory);
 
   if (winStreak >= 3) {
+    FX.onStreak(winStreak);
     setTimeout(() => setKaijiLine("streak"), 1500);
   }
+  if (net >= 5000) FX.onBigWin(net);
 
   updateHUD();
   checkBankrupt();
@@ -905,6 +994,8 @@ function newRound() {
   els.playerScore.textContent = "";
   els.dealerScore.textContent = "";
 
+  FX.clearEventClasses();
+
   showBetPanel(true);
   updateBetUI();
   setControls({ hit: false, stand: false, double: false, newRound: false });
@@ -920,6 +1011,9 @@ function startGame() {
   currentBet = 0;
   pendingBet = 0;
   deck = createDeck();
+
+  FX.init();
+  FX.resetSession();
 
   updateHUD();
   showScreen("game");
@@ -989,6 +1083,8 @@ els.customBet.addEventListener("input", () => {
     document.querySelectorAll(".chip").forEach((ch) => ch.classList.remove("selected"));
   }
 });
+
+FX.init();
 
 // スタート画面のセリフローテーション
 els.startQuote.textContent = pickRandom(START_QUOTES);
