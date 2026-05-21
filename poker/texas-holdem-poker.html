@@ -611,7 +611,7 @@
             <div class="player-area">
                 <div class="player-info">
                     <span>CPU</span>
-                    <span class="chips">チップ: <span id="computerChips">1000</span></span>
+                    <span class="chips" style="display: none;">チップ: <span id="computerChips">1000</span></span>
                 </div>
                 <div class="player-cards" id="computerCards">
                     <!-- コンピューターのカード -->
@@ -621,6 +621,7 @@
         </div>
         
         <div class="controls">
+            <button id="homeBtn" style="background: linear-gradient(135deg, #757575, #424242); box-shadow: 0 4px 15px rgba(0,0,0,0.3);">ホームへ戻る</button>
             <button id="newGameBtn">新しいゲーム</button>
             <button id="checkBtn" disabled>チェック</button>
             <button id="callBtn" disabled>コール</button>
@@ -629,9 +630,9 @@
         </div>
         
         <div class="bet-controls" id="betControls" style="display: none;">
-            <button id="decreaseBetBtn" class="bet-adjust-btn">−10</button>
+            <button id="decreaseBetBtn" class="bet-adjust-btn">−100</button>
             <input type="number" id="betAmount" class="bet-input" min="10" step="10" value="10">
-            <button id="increaseBetBtn" class="bet-adjust-btn">+10</button>
+            <button id="increaseBetBtn" class="bet-adjust-btn">+100</button>
             <button id="confirmRaiseBtn" class="bet-confirm-btn">レイズ確定</button>
             <button id="cancelRaiseBtn" class="bet-cancel-btn">キャンセル</button>
         </div>
