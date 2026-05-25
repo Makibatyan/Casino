@@ -42,16 +42,16 @@ class PokerGame {
         this.playerHand = [];               // プレイヤーの手札（2枚）
         this.computerHand = [];             // コンピューターの手札（2枚）
         
-        // チップとベット関連
+        // 万とベット関連
         this.pot = 0;                       // ポット（賭け金の合計）
-        this.playerChips = 1000;            // プレイヤーのチップ
-        this.computerChips = 1000;          // コンピューターのチップ
+        this.playerChips = 1000;            // プレイヤーの万
+        this.computerChips = 10000000000;   // コンピューターの万
         this.currentBet = 0;                // 現在のベット額
         this.playerBet = 0;                 // プレイヤーのベット額
         this.computerBet = 0;               // コンピューターのベット額
         
         // ゲームフェーズ管理
-        this.gamePhase = 'waiting'; // waiting, preflop, flop, turn, river, showdown
+        this.gamePhase = 'waiting'; // waiting, preflop, flop, turn, river, showdown, ended
         this.currentPlayer = 0;            // 現在のプレイヤー (0=プレイヤー, 1=コンピューター)
         this.roundStartPlayer = 0;          // ラウンド開始プレイヤー
         this.hasActedThisRound = [false, false]; // 各プレイヤーのアクション状態
@@ -78,9 +78,9 @@ class PokerGame {
     startNewGame() {
         console.log("Current Phase:", this.gamePhase, "Player:", this.currentPlayer);
         
-        // チップチェック
-        if (this.playerChips <= 0) {
-            this.updateGameStatus('チップがありません。新しいゲームを開始できません。');
+        // 参加料（100万ペリカ）に足りるかチェック
+        if (this.playerChips < 100) {
+            this.updateGameStatus('万が不足しています（最低100万必要）。新しいゲームを開始できません。');
             this.disableBettingButtons();
             return;
         }
@@ -90,7 +90,7 @@ class PokerGame {
         this.playerHand = [];
         this.computerHand = [];
         this.pot = 0;
-        this.currentBet = 10;
+        this.currentBet = 100; // 初期ベット額を100に変更
         this.playerBet = 0;
         this.computerBet = 0;
         this.gamePhase = 'preflop';
@@ -101,15 +101,13 @@ class PokerGame {
         // CPUレイズ表示を非表示
         document.getElementById('cpuRaiseStatus').style.display = 'none';
 
-
-        
         // カード配布（2人で4枚）
         this.playerHand.push(this.deck.deal(), this.deck.deal());
         this.computerHand.push(this.deck.deal(), this.deck.deal());
         
-        // 強制的に10チップアンテ（2人で20チップ）
-        const playerAnte = Math.min(10, this.playerChips);
-        const computerAnte = Math.min(10, this.computerChips);
+        // 強制的に100万アンテ（2人で200万）
+        const playerAnte = Math.min(100, this.playerChips);
+        const computerAnte = Math.min(100, this.computerChips);
         this.playerChips -= playerAnte;
         this.computerChips -= computerAnte;
         this.playerBet = playerAnte;
@@ -117,12 +115,13 @@ class PokerGame {
         this.pot = playerAnte + computerAnte;
         
         this.updateUI();
-        this.updateGameStatus('新しいゲームが開始されました！参加料として10チップのアンテをベットしました。');
+        this.updateGameStatus('新しいゲームが開始されました！参加料として100万のアンテをベットしました。');
         this.enableBettingButtons();
         
         // 新しいゲームボタンを無効化
         document.getElementById('newGameBtn').disabled = true;
     }
+
     playerCheck() {
         if (this.currentBet > this.playerBet) {
             this.updateGameStatus('チェックできません。コールまたはレイズしてください。');
@@ -133,9 +132,7 @@ class PokerGame {
         setTimeout(() => this.nextPlayer(), 800); // 少し遅延を入れてメッセージが見えるようにする
     }      
 
-/*イマココ */
-
-playerCall() {
+    playerCall() {
         // コールに必要な「追加の」額を計算
         const callAmount = this.currentBet - this.playerBet;
         
@@ -144,37 +141,35 @@ playerCall() {
             return;
         }
         
-        // 実際に支払える額（手持ちチップが足りない場合はオールイン）
+        // 実際に支払える額（手持ち万が足りない場合はオールイン）
         const actualCallAmount = Math.min(callAmount, this.playerChips);
         
-        // チップの減算とポットへの追加
+        // 万の減算とポットへの追加
         this.playerChips = Math.max(0, this.playerChips - actualCallAmount);
         this.pot += actualCallAmount;
         
-        // 【修正点1】playerBetは「このラウンドの総ベット額」にするため、追加分を足す（またはcurrentBetに合わせる）
         this.playerBet += actualCallAmount;
         
         // オールイン時の余剰分処理
         if (actualCallAmount < callAmount) {
-            const surplus = callAmount - actualCallAmount; // 60 - 30 = 30
+            const surplus = callAmount - actualCallAmount; 
             
             // 1. CPUの手持ちに返す
             this.computerChips += surplus;
             
-            // 2. 【追加】ポットからもその余剰分を引く！
+            // 2. ポットからもその余剰分を引く
             this.pot -= surplus; 
             
-            // 3. お互いのベット額の「着地点」を、プレイヤーが全賭けした額（70）に合わせる
-            this.playerBet = this.playerBet; //（これはそのままでOK、70の状態）
-            this.computerBet = this.playerBet; // CPUのベット額を 70 に下げる
-            this.currentBet = this.playerBet;  // 全体の最高ベット額も 70 に下げる
+            // 3. お互いのベット額の「着地点」を、プレイヤーが全賭けした額に合わせる
+            this.computerBet = this.playerBet; 
+            this.currentBet = this.playerBet;  
             
             setTimeout(() => {
-                this.updateGameStatus(`${actualCallAmount}チップでオールイン！余剰の${surplus}チップをCPUに返却しました。`);
+                this.updateGameStatus(`${actualCallAmount}万でオールイン！余剰の${surplus}万をCPUに返却しました。`);
             }, 800);
-        }else {
+        } else {
             setTimeout(() => {
-                this.updateGameStatus(`${callAmount}チップコールしました。`);
+                this.updateGameStatus(`${callAmount}万コールしました。`);
             }, 1000);
         }
         
@@ -185,7 +180,7 @@ playerCall() {
             // 現在のプレイヤー（プレイヤー=0）のアクションを完了にする
             this.hasActedThisRound[0] = true;
 
-            // 【修正点2】全員のアクション完了とベット額の一致を正しく判定して分岐
+            // 全員のアクション完了とベット額の一致を正しく判定して分岐
             if (this.checkAllPlayersActed() && this.playerBet === this.computerBet) {
                 this.checkBettingRoundComplete(); // 次のフェーズへ
             } else {
@@ -194,10 +189,9 @@ playerCall() {
         }, 800);
     }
 
-
     showRaiseControls() {
         document.getElementById('betControls').style.display = 'flex';
-        document.getElementById('betAmount').value = 10;
+        document.getElementById('betAmount').value = 100; // 初期値を100に変更
         this.disableBettingButtons();
         this.updateGameStatus('レイズ額を入力してください');
     }
@@ -211,66 +205,89 @@ playerCall() {
 
     increaseBetAmount() {
         const betInput = document.getElementById('betAmount');
-        const currentValue = parseInt(betInput.value) || 10;
-        const newValue = Math.min(currentValue + 10, this.playerChips);
+        const currentValue = parseInt(betInput.value) || 100;
+        // 100ずつ増やし、プレイヤーの手持ち万を超えないようにする
+        const newValue = Math.min(currentValue + 100, this.playerChips);
         betInput.value = newValue;
     }
 
     decreaseBetAmount() {
         const betInput = document.getElementById('betAmount');
-        const currentValue = parseInt(betInput.value) || 10;
-        const newValue = Math.max(currentValue - 10, 10);
+        const currentValue = parseInt(betInput.value) || 100;
+        // 100ずつ減らし、最低でも100にする
+        const newValue = Math.max(currentValue - 100, 100);
         betInput.value = newValue;
     }
 
     confirmRaise() {
         console.log("Current Phase:", this.gamePhase, "Player:", this.currentPlayer);
-        const raiseAmount = parseInt(document.getElementById('betAmount').value);
-        if (isNaN(raiseAmount) || raiseAmount <= 0) {
-            this.updateGameStatus('有効なチップ数を入力してください。');
+        
+        // 入力された額＝「今出している分に『追加で上乗せする』額」として扱う
+        const additionalRaiseAmount = parseInt(document.getElementById('betAmount').value);
+        if (isNaN(additionalRaiseAmount) || additionalRaiseAmount <= 0) {
+            this.updateGameStatus('有効な万数を入力してください。');
             return;
         }
         
-        // CPUがレイズした場合、CPUのレイズ額以上でなければレイズできない
-        if (this.computerBet > this.playerBet && raiseAmount < (this.computerBet - this.playerBet)) {
-            const minRaise = this.computerBet - this.playerBet;
-            this.updateGameStatus(`CPUがレイズしています。最低${minRaise}チップ以上でレイズしてください。`);
-            return;
-        }
+        // プレイヤーの新しい合計ベット額を計算
+        const totalBet = this.playerBet + additionalRaiseAmount;
         
-        const totalBet = raiseAmount;
-        const needed = totalBet - this.playerBet;
+        // 今回手元から削る必要がある万額（入力された額そのもの）
+        const needed = additionalRaiseAmount;
+        
         if (needed > this.playerChips) {
-            this.updateGameStatus(`チップが不足しています。必要: ${needed}チップ`);
+            this.updateGameStatus(`万が不足しています。必要: ${needed}万（手持ち: ${this.playerChips}）`);
             return;
         }
         
-        const actualNeeded = Math.min(needed, this.playerChips);
-        this.playerChips = Math.max(0, this.playerChips - actualNeeded);
-        this.pot += actualNeeded;
+        // 残高全額を上乗せしようとしているか（オールイン判定）
+        const isAllIn = (needed === this.playerChips);
+        
+        // CPUがすでにレイズしている場合、その額に追いついた上でさらに上乗せできているかチェック（オールイン時は例外）
+        if (this.computerBet > this.playerBet && totalBet < this.computerBet && !isAllIn) {
+            const minTotalBet = this.computerBet;
+            const minAdd = minTotalBet - this.playerBet;
+            this.updateGameStatus(`CPUのベット額（${this.computerBet}）に対抗するには、最低でも${minAdd}万以上を入力してください。`);
+            return;
+        }
+        
+        // 万計算とベット額の反映
+        this.playerChips = Math.max(0, this.playerChips - needed);
+        this.pot += needed;
         this.playerBet = totalBet;
         this.currentBet = totalBet;
         
         this.player_reisuse = true;
         this.hideRaiseControls();
         this.updateUI();
-        this.updateGameStatus(`${raiseAmount}チップレイズしました。`);
         
-        // レイズ処理：レイズした本人以外をアクション完了を外し、レイズした本人はアクション完了にする
+        // プレイヤーが全額突っ込んだ（オールイン）場合の処理
+        if (this.playerChips === 0) {
+            this.updateGameStatus(`プレイヤーが手持ちの${needed}万すべてを上乗せしてオールインレイズしました！`);
+            
+            // 相手（CPU）にコールするかフォールドするかを判断させるため、手番を回す
+            this.hasActedThisRound = [false, false];
+            this.hasActedThisRound[0] = true; // プレイヤーはアクション完了
+            
+            this.disableBettingButtons();
+            setTimeout(() => {
+                this.nextPlayer(); // CPUのターンへ交代
+            }, 1000);
+            return;
+        }
+        
+        // 通常のレイズ時の処理
+        this.updateGameStatus(`${needed}万を追加して、合計${totalBet}万にレイズしました。`);
+        
         this.hasActedThisRound = [false, false];
-        this.hasActedThisRound[0] = true; // レイズしたプレイヤーはアクション済み
+        this.hasActedThisRound[0] = true; // レイズした本人はアクション済み
         
-        this.disableBettingButtons(); // メッセージ表示中はボタンを無効化
+        this.disableBettingButtons();
         
-        // 【重要】1秒後にターンを確認して次へ進める
-        // この時点でcurrentPlayerはまだ0（プレイヤー）のまま
-        // nextPlayer()を呼ぶことでcurrentPlayerが1（CPU）に切り替わる
         setTimeout(() => {
             if (this.currentPlayer === 1) {
-                // currentPlayerが既に1なら何もしない（念のため）
                 console.log('CPUのターンです');
             } else {
-                // 通常ここに入る：nextPlayer()でターンを交代
                 this.nextPlayer();
             }
         }, 1000);
@@ -282,22 +299,7 @@ playerCall() {
         this.updateGameStatus('レイズをキャンセルしました');
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*＝＝＝＝＝＝＝＝内部処理＝＝＝＝＝＝＝*/
+    /*＝＝＝＝＝＝＝＝内部処理＝＝＝＝＝＝＝*/
 
     //レイズコントロールUIを非表示にする
     hideRaiseControls() {
@@ -306,24 +308,15 @@ playerCall() {
 
     // 次のプレイヤーにターンを移す
     nextPlayer() {
-        // 【ステップ1】現在のプレイヤーを「アクション済み」として記録
-        // これで「誰がまだアクションしていないか」を追跡できる
         this.hasActedThisRound[this.currentPlayer] = true;
-        
-        // 【ステップ2】ターンを交代（0→1、1→0の切り替え）
         this.currentPlayer = 1 - this.currentPlayer;
         
-        // 【ステップ3】全員がアクションしたかチェック
-        // 両者ともhasActedThisRoundがtrueなら、ベッティングラウンド完了
         if (this.checkAllPlayersActed()) {
             this.checkBettingRoundComplete(); // 次のフェーズへ進む
         }
-        // 【ステップ4】まだ続く場合は次のプレイヤーのターンを開始
         else if (this.currentPlayer === 0) {
-            // プレイヤーのターン：ボタンを有効化して操作待ち
             this.enableBettingButtons();
         } else {
-            // CPUのターン：0.8秒後にcomputerAction()を実行
             console.log('CPUのターンを開始します');
             setTimeout(() => this.computerAction(), 800);
         }
@@ -339,30 +332,15 @@ playerCall() {
     // 全員がアクション完了したかチェック
     checkAllPlayersActed() {
         console.log("Current Phase:", this.gamePhase, "Player:", this.currentPlayer);
-        
-        // 【アクティブプレイヤーの判定】
-        // playerBet >= 0 → フォールドしていない（アクティブ）
-        // playerBet = -1 → フォールド済み（非アクティブ）
         const activePlayers = [];
         
-        // プレイヤーがフォールドしていない場合
-        if (this.playerBet >= 0) {
-            activePlayers.push(0);
-        }
-        // コンピューターがフォールドしていない場合
-        if (this.computerBet >= 0) {
-            activePlayers.push(1);
-        }
+        if (this.playerBet >= 0) activePlayers.push(0);
+        if (this.computerBet >= 0) activePlayers.push(1);
         
-        // 【片方がフォールドした場合】
-        // アクティブプレイヤーが1人だけなら、ベッティングラウンドは即座に完了
         if (activePlayers.length === 1) {
             return true;
         }
         
-        // 【両者ともアクティブな場合】
-        // hasActedThisRound[0]とhasActedThisRound[1]が両方trueなら完了
-        // レイズが発生すると両方falseにリセットされる（相手に応答を求めるため）
         return activePlayers.every(index => this.hasActedThisRound[index]);
     }
 
@@ -370,17 +348,10 @@ playerCall() {
     checkBettingRoundComplete() {
         const activePlayers = [];
         
-        // プレイヤーがフォールドしていない場合
-        if (this.playerBet >= 0) {
-            activePlayers.push(0);
-        }
-        // コンピューターがフォールドしていない場合
-        if (this.computerBet >= 0) {
-            activePlayers.push(1);
-        }
+        if (this.playerBet >= 0) activePlayers.push(0);
+        if (this.computerBet >= 0) activePlayers.push(1);
         
         if (activePlayers.length === 1) {
-            // 1人だけ残った場合、ショーダウンへ
             this.gamePhase = 'showdown';
             this.showdown();
             return;
@@ -388,18 +359,10 @@ playerCall() {
         
         // オールインチェック
         const allInPlayers = [];
-        // プレイヤーがオールインの場合
-        if (this.playerChips === 0 && this.playerBet > 0) {
-            allInPlayers.push(0);
-        }
-        // コンピューターがオールインの場合
-        if (this.computerChips === 0 && this.computerBet > 0) {
-            allInPlayers.push(1);
-        }
+        if (this.playerChips === 0 && this.playerBet > 0) allInPlayers.push(0);
+        if (this.computerChips === 0 && this.computerBet > 0) allInPlayers.push(1);
         
-        // 片方がオールインでもう片方がコールした場合、即座にショーダウン
         if (allInPlayers.length === 1 && activePlayers.length === 2) {
-            // 残りのカードをすべて配る
             while (this.communityCards.length < 5) {
                 this.communityCards.push(this.deck.deal());
             }
@@ -409,7 +372,6 @@ playerCall() {
             return;
         }
         
-        // アクティブなプレイヤー全員がベット揃いしているかチェック
         let allBetsMatch = true;
         for (const playerIndex of activePlayers) {
             const bet = playerIndex === 0 ? this.playerBet : this.computerBet;
@@ -419,154 +381,239 @@ playerCall() {
             }
         }
         
-        // 全員が同じベット額で、かつ全員がアクション完了している場合
         if (allBetsMatch && this.checkAllPlayersActed()) {
-            this.nextPhase(); // 即座に次のフェーズへ
+            this.nextPhase(); 
         }
     }
 
+    // ★★★ 強く調整したCPU思考ロジック（羽振り調整版） ★★★
     computerAction() {
-        console.log('computerActionが呼ばれました');
+        console.log('思考ロジック強化版 computerAction が呼び出されました');
         
-        // 【CPUの情報取得】
         const hand = this.computerHand;
-        const playerChips = this.computerChips;
-        const currentBet = this.computerBet;
+        const cpuChips = this.computerChips;
+        const cpuCurrentBet = this.computerBet;
         const playerName = 'コンピューター';
         
-        // 【ハンド評価と確率計算】
-        // handEvaluator.jsでハンドの強さを判定（0:ハイカード ～ 4:ストレートフラッシュ）
-        const computerHand = HandEvaluator.evaluateHand([...hand, ...this.communityCards]);
-        const random = Math.random(); // 0.0～1.0の乱数（行動のバリエーション用）
+        // 1. ハンドの純粋な強さを評価 (0 ~ 8)
+        const computerHandEval = HandEvaluator.evaluateHand([...hand, ...this.communityCards]);
+        const handRank = computerHandEval.rank; 
         
-        // 【コールに必要な額を計算】
-        // this.currentBet = 場の最高額, currentBet = CPUが既にベットした額
-        const callAmount = this.currentBet - currentBet;
+        // 2. コール要求額とポットオッズの算出
+        const callAmount = this.currentBet - cpuCurrentBet;
+        const totalPot = this.pot;
+        const potOdds = callAmount > 0 ? callAmount / (totalPot + callAmount) : 0;
         
-        // 【ポットオッズ計算】
-        // コール額 ÷ (ポット + コール額) = 勝率がこれ以上ならコールすべき
-        const potOdds = callAmount > 0 ? callAmount / (this.pot + callAmount) : 0;
+        // 3. 次のカードで大逆転できる可能性（ドロー関係）のチェック
+        const hasFlushDraw = this.checkFlushDraw(hand, this.communityCards);
+        const hasStraightDraw = this.checkStraightDraw(hand, this.communityCards);
+        const hasStrongDraw = (hasFlushDraw || hasStraightDraw) && this.gamePhase !== 'river';
+
+        // 4. 現フェーズに合わせたハンド評価値のスコアリング化(0.0 ~ 1.0)
+        let handStrength = 0.0;
         
-        // 【相手のレイズサイズ分析】
-        // ポットに対するレイズ額の比率で、相手の強気度を判断
-        const raiseSize = this.currentBet;
-        const raiseToPotRatio = raiseSize / this.pot; // 例：ポット100に対してレイズ50なら0.5
+        if (this.gamePhase === 'preflop') {
+            handStrength = this.evaluatePreflopHand(hand);
+        } else {
+            handStrength = Math.min(handRank / 4.0, 1.0); 
+            if (hasStrongDraw) {
+                handStrength = Math.max(handStrength, 0.45); 
+            }
+        }
+
+        const random = Math.random();
         
-        // 【ヘルパー関数】チップとベット額を更新
         const updateChipsAndBet = (amount, newBet) => {
             this.computerChips = Math.max(0, this.computerChips - amount);
             this.computerBet = newBet;
         };
-        
-        const setBetToZero = () => {
-            this.computerBet = -1;
-        };
-        
-        // 【分岐1】相手がレイズした場合（this.currentBet > CPUのcurrentBet）
-        // → フォールド、コール、再レイズの選択肢
-        if (this.player_reisuse == true) {
-            this.player_reisuse = false;
 
-            // 【フォールド確率の計算】
-            // ハンドが強いほどフォールド確率が低い（強気に行く）
-            // rank 0(ハイカード):15%  1(ワンペア):8%  2(ツーペア):4%  3(スリーカード):2%  4以上:1%
-            let foldProbability = [0.15, 0.08, 0.04, 0.02, 0.01][Math.min(computerHand.rank, 4)];
-            
-            // 【相手のレイズサイズを考慮】
-            // 大きなレイズには大きなハンドが必要と判断
-            if (raiseToPotRatio > 1.0) foldProbability += 0.1;  // ポット以上のレイズは危険、+10%
-            else if (raiseToPotRatio > 0.5) foldProbability += 0.05; // 半分以上なら+5%
-            
-            // 【ポットオッズを考慮】
-            // ポットオッズが悪い（コールに対して得られる利益が少ない）場合、フォールドしやすくする
-            if (potOdds > 0.3) foldProbability += 0.05; // 30%以上必要なら+5%
-            if (potOdds > 0.5) foldProbability += 0.1;  // 50%以上必要なら+10%
-            
-            if (random < Math.min(foldProbability, 0.4)) {
-                this.updateGameStatus(`${playerName}がフォールドしました。`);
-                setBetToZero();
-                setTimeout(() => this.checkBettingRoundComplete(), 800); // フォールド時は長めの遅延
+        // ==========================================
+        // CPUの羽振りを決める内部ロジック (100-500, 稀に800)
+        // ==========================================
+        const determineHafuriAmount = () => {
+            const sizeRoll = Math.random();
+            if (sizeRoll < 0.15) {
+                // 15%の確率で「稀に800」
+                return 800;
             } else {
-                updateChipsAndBet(callAmount, this.currentBet);
-                this.pot += callAmount;
-                this.updateGameStatus(`${playerName}が${callAmount}チップコールしました。`);
-                this.updateUI(); // UIを更新してメッセージを確実に表示
-                this.disableBettingButtons(); // 遅延中はボタンを無効化
-                setTimeout(() => {
-                    if (this.checkAllPlayersActed()) {
-                    this.checkBettingRoundComplete();
-                }else {
-            this.nextPlayer();
-        }
-                }, 800); // 少し遅延を入れてメッセージが見えるようにする
+                // 85%の確率で「100〜500」の100刻み
+                return (Math.floor(Math.random() * 5) + 1) * 100;
             }
-        } else {
-            // 【レイズ確率の計算】
-            // ハンドが強いほどレイズ確率が高い（攻撃的に行く）
-            // rank 0:10%  1:15%  2:30%  3:40%  4以上:50%
-            let raiseProbability = [0.1, 0.15, 0.3, 0.4, 0.5][Math.min(computerHand.rank, 4)];
+        };
+
+        // ----------------------------------------------------
+        // シチュエーション1：プレイヤーがベット・レイズを仕掛けてきている場合
+        // ----------------------------------------------------
+        if (this.player_reisuse === true || callAmount > 0) {
+            this.player_reisuse = false; // フラグの消化
+
+            let foldThreshold = potOdds * 0.85; 
+            if (callAmount / totalPot > 1.2 && handStrength < 0.6) {
+                foldThreshold += 0.15;
+            }
+
+            // フォールド処理
+            if (handStrength < foldThreshold && !hasStrongDraw && random < 0.9) {
+                this.updateGameStatus(`${playerName}がフォールドしました。`);
+                this.computerBet = -1;
+                this.disableBettingButtons();
+                setTimeout(() => this.checkBettingRoundComplete(), 800);
+                return;
+            }
             
-            // 15%の確率で「ブラフレイズ」のチャンスを追加（弱いハンドでも強気に出る）
-            if (random < 0.15) raiseProbability += 0.25;
-            
-            // 【レイズ実行条件】乱数 < 確率 かつ チップが50以上
-            if (random < Math.min(raiseProbability, 0.5) && playerChips > 50) {
-                const raiseAmount = Math.min(50 + Math.floor(random * 50), playerChips);
-                updateChipsAndBet(raiseAmount, currentBet + raiseAmount);
-                this.pot += raiseAmount;
-                this.currentBet = currentBet + raiseAmount;
-                this.updateGameStatus(`${playerName}が${raiseAmount}チップレイズしました。`);
+            // リレイズ(3ベット)の判定
+            const canRaise = cpuChips > (this.currentBet - cpuCurrentBet) + 100;
+            const wantsToValueRaise = handStrength > 0.75 && random < 0.45;
+            const wantsToSemiBluff = hasStrongDraw && random < 0.25;
+
+            if ((wantsToValueRaise || wantsToSemiBluff) && canRaise) {
+                // 羽振り関数からベット額を決定
+                let raiseSize = determineHafuriAmount();
                 
-                // レイズ処理：レイズした本人以外をアクション完了を外し、レイズした本人はアクション完了にする
-                this.hasActedThisRound = [false, false];
-                this.hasActedThisRound[1] = true; // レイズしたCPUはアクション済み
+                // 所持万を超えないように安全弁をかける
+                raiseSize = Math.min(raiseSize, cpuChips - callAmount); 
+                if (raiseSize < 100) raiseSize = 100; 
+
+                const totalNewBet = this.currentBet + raiseSize;
+                const addedAmount = totalNewBet - cpuCurrentBet;
+
+                updateChipsAndBet(addedAmount, totalNewBet);
+                this.pot += addedAmount;
+                this.currentBet = totalNewBet;
                 
-                // CPUレイズ額を表示
-                document.getElementById('cpuRaiseStatus').style.display = 'block';
-                document.getElementById('cpuRaiseAmount').textContent = raiseAmount;
+                this.updateGameStatus(`${playerName}がさらに${raiseSize}万レイズしました！`);
+                this.triggerCpuRaiseUI(raiseSize);
+                return;
+            }
+
+            // 通常のコール処理
+            updateChipsAndBet(callAmount, this.currentBet);
+            this.pot += callAmount;
+            this.updateGameStatus(`${playerName}が${callAmount}万コールしました。`);
+            this.updateUI();
+            this.disableBettingButtons();
+            setTimeout(() => {
+                if (this.checkAllPlayersActed()) this.checkBettingRoundComplete();
+                else this.nextPlayer();
+            }, 800);
+
+        } 
+        // ----------------------------------------------------
+        // シチュエーション2：場がチェックで回ってきた場合（積極的なベット検討）
+        // ----------------------------------------------------
+        else {
+            const isValueBet = handStrength > 0.35 && random < 0.65; 
+            const isSemiBluff = hasStrongDraw && random < 0.35;      
+            const isPureBluff = this.gamePhase === 'river' && handRank === 0 && random < 0.12; 
+
+            const canBet = cpuChips >= 100;
+
+            if ((isValueBet || isSemiBluff || isPureBluff) && canBet) {
+                // 羽振り関数からベット額を決定
+                let betAmount = determineHafuriAmount();
                 
-                this.disableBettingButtons(); // 遅延中はボタンを無効化
-                setTimeout(() => {
-                    if (this.currentPlayer === 0) {
-                        this.enableBettingButtons();
-                    }else {
-                        this.nextPlayer();
-                    }
-                }, 800); // 少し遅延を入れてメッセージが見えるようにする
+                // 所持万を超えないように調整
+                betAmount = Math.min(betAmount, cpuChips); 
+                
+                updateChipsAndBet(betAmount, cpuCurrentBet + betAmount);
+                this.pot += betAmount;
+                this.currentBet = cpuCurrentBet + betAmount;
+                
+                let logText = isPureBluff ? "強力なブラフベット" : "ベット";
+                this.updateGameStatus(`${playerName}が${betAmount}万${logText}しました。`);
+                this.triggerCpuRaiseUI(betAmount);
             } else {
-                // 【チェック処理】レイズせずにターンを終了
-                // ※このelseブロックは「this.currentBet > currentBet」がfalseの時=相手がチェックした時のみ実行
                 this.updateGameStatus(`${playerName}がチェックしました。`);
-                this.updateUI(); // UIを更新してメッセージを確実に表示
-                this.disableBettingButtons(); // 遅延中はボタンを無効化
-                
+                this.updateUI();
+                this.disableBettingButtons();
                 setTimeout(() => {
-                    // ラウンドが終わったかどうかをチェック
-                    if (this.checkAllPlayersActed()) {
-                        this.checkBettingRoundComplete(); // 次のフェーズへ
-                    } else {
-                        this.nextPlayer(); // プレイヤーに交代
-                    }
+                    if (this.checkAllPlayersActed()) this.checkBettingRoundComplete();
+                    else this.nextPlayer();
                 }, 800);
             }
         }
     }
 
-    nextPhase() {
-        // フェーズ移行中はボタンを無効化
-        this.disableBettingButtons();
+    // プリフロップハンド(2枚)のポテンシャルを判定する評価関数
+    evaluatePreflopHand(hand) {
+        const card1 = hand[0];
+        const card2 = hand[1];
         
-        // CPUレイズ表示を非表示
+        const isPair = card1.suit === card2.suit; // ※既存Cardクラスのバグ防止として安全に
+        const highRank = Math.max(card1.rank, card2.rank);
+        const lowRank = Math.min(card1.rank, card2.rank);
+        const gap = highRank - lowRank;
+
+        let score = 0.15; // 最低保証スコア
+
+        // ポケットペアの評価
+        if (card1.rank === card2.rank) {
+            score += 0.45;
+            if (highRank >= 10) score += 0.25; // TT, JJ, QQ, KK, AAは最強
+        } else {
+            if (highRank >= 11) score += 0.15; // 絵札/Aを1枚でも持っている
+            if (lowRank >= 10) score += 0.15;  // 2枚とも10以上
+            if (card1.suit === card2.suit) score += 0.08; // スーテッド（同じマーク）
+            if (gap === 1) score += 0.07;      // コネクター（数字が連続）
+        }
+        return Math.min(score, 1.0);
+    }
+
+    // フラッシュドローの判定（手札＋コミュニティで同じスートが4枚あるか）
+    checkFlushDraw(hand, community) {
+        const all = [...hand, ...community];
+        const counts = {};
+        all.forEach(c => counts[c.suit] = (counts[c.suit] || 0) + 1);
+        return Object.values(counts).some(count => count === 4);
+    }
+
+    // ストレートドローの判定（数字の並びが4連続または1個抜けの4枚か）
+    checkStraightDraw(hand, community) {
+        const all = [...hand, ...community];
+        const ranks = [...new Set(all.map(c => c.rank))].sort((a, b) => b - a);
+        if (ranks.length < 4) return false;
+
+        for (let i = 0; i <= ranks.length - 4; i++) {
+            if (ranks[i] - ranks[i+3] === 3) return true; // 4連続（オープンエンド）
+            if (ranks[i] - ranks[i+3] === 4) return true; // 1つ抜け（ガットショット）
+        }
+        // Aを1として計算する特殊ケース処理
+        if (ranks.includes(14)) {
+            const lowRanks = ranks.map(r => r === 14 ? 1 : r).sort((a, b) => b - a);
+            for (let i = 0; i <= lowRanks.length - 4; i++) {
+                if (lowRanks[i] - lowRanks[i+3] <= 4) return true;
+            }
+        }
+        return false;
+    }
+
+    // CPUのベット時のUIとターン管理の共通化メソッド
+    triggerCpuRaiseUI(amount) {
+        this.hasActedThisRound = [false, false];
+        this.hasActedThisRound[1] = true; 
+        
+        document.getElementById('cpuRaiseStatus').style.display = 'block';
+        document.getElementById('cpuRaiseAmount').textContent = amount;
+        
+        this.updateUI();
+        this.disableBettingButtons();
+        setTimeout(() => {
+            if (this.currentPlayer === 0) this.enableBettingButtons();
+            else this.nextPlayer();
+        }, 800);
+    }
+
+    nextPhase() {
+        this.disableBettingButtons();
         document.getElementById('cpuRaiseStatus').style.display = 'none';
         
-        // ベットをリセット
         this.playerBet = 0;
         this.computerBet = 0;
         this.currentBet = 0;
-        this.currentPlayer = 0; // プレイヤーから開始
-        this.hasActedThisRound = [false, false]; // アクション状態をリセット
+        this.currentPlayer = 0; 
+        this.hasActedThisRound = [false, false]; 
         
-    
         switch (this.gamePhase) {
             case 'preflop':
                 this.communityCards.push(this.deck.deal(), this.deck.deal(), this.deck.deal());
@@ -593,39 +640,32 @@ playerCall() {
         
         this.updateUI();
         
-        // 少し遅延してから次のベッティングラウンドを開始
         setTimeout(() => {
             if (this.currentPlayer === 0) {
                 this.enableBettingButtons();
             }
-            // CPUのターンはnextPlayer関数で処理するため、ここでは呼ばない
-        }, 800); // 600ms遅延してフェーズ移行の演出を確実に表示
+        }, 800); 
     }
 
     showdown() {
         this.gamePhase = 'showdown';
         
-        // 全員のハンドを評価
         const hands = [
             { player: 0, hand: HandEvaluator.evaluateHand([...this.playerHand, ...this.communityCards]), name: 'プレイヤー' },
             { player: 1, hand: HandEvaluator.evaluateHand([...this.computerHand, ...this.communityCards]), name: 'コンピューター' }
         ];
         
-        // フォールドしたプレイヤーを除外
         const bets = [this.playerBet, this.computerBet];
-        const activeHands = hands.filter((h, i) => bets[i] >= 0); // -1がフォールド
+        const activeHands = hands.filter((h, i) => bets[i] >= 0); 
         
-        // 最強のハンドを見つける
         activeHands.sort((a, b) => HandEvaluator.compareHands(b.hand, a.hand));
         
-        // ハンドの比較結果を表示
         let comparisonMessage = `ショーダウン！\n`;
         
-        // アクティブなプレイヤーのハンドのみ表示
         if (this.playerBet >= 0) {
             const playerHand = hands[0];
-            document.getElementById('playerHandRank').textContent = playerHand.hand.rankName;
-            comparisonMessage += `プレイヤー: ${playerHand.hand.rankName}\n`;
+            document.getElementById('playerHandRank').textContent = playerHand.hand.rankName || playerHand.hand.name;
+            comparisonMessage += `プレイヤー: ${playerHand.hand.rankName || playerHand.hand.name}\n`;
         } else {
             document.getElementById('playerHandRank').textContent = 'フォールド';
             comparisonMessage += `プレイヤー: フォールド\n`;
@@ -633,28 +673,25 @@ playerCall() {
         
         if (this.computerBet >= 0) {
             const computerHand = hands[1];
-            document.getElementById('computerHandRank').textContent = computerHand.hand.rankName;
-            comparisonMessage += `コンピューター: ${computerHand.hand.rankName}\n`;
+            document.getElementById('computerHandRank').textContent = computerHand.hand.rankName || computerHand.hand.name;
+            comparisonMessage += `コンピューター: ${computerHand.hand.rankName || computerHand.hand.name}\n`;
         } else {
             document.getElementById('computerHandRank').textContent = 'フォールド';
             comparisonMessage += `コンピューター: フォールド\n`;
         }
         
-        // 勝者を判定
-        const winner = activeHands[0]; // 最強のハンド（ソート済み）
+        const winner = activeHands[0]; 
         
-        // 引き分けかどうかを確認
         const winners = activeHands.filter(h => 
             HandEvaluator.compareHands(h.hand, winner.hand) === 0
         );
         
         if (winners.length === 1) {
-                this.endRound(winner.player);
+            this.endRound(winner.player);
         } else {
-            // 引き分けの場合
             const shareAmount = Math.floor(this.pot / winners.length);
             
-            comparisonMessage = `\n引き分け！${shareAmount}チップずつ獲得！`;
+            comparisonMessage = `\n引き分け！${shareAmount}万ずつ獲得！`;
             this.updateGameStatus(comparisonMessage);
             
             winners.forEach(w => {
@@ -662,7 +699,6 @@ playerCall() {
                 else if (w.player === 1) this.computerChips += shareAmount;
             });
             
-            // 引き分けの場合は両方をハイライト
             document.querySelectorAll('.player-area').forEach(area => {
                 area.style.background = 'linear-gradient(135deg, rgba(255, 193, 7, 0.3), rgba(255, 235, 59, 0.3))';
                 area.style.border = '2px solid #ffc107';
@@ -672,10 +708,8 @@ playerCall() {
             this.updateUI();
             this.disableBettingButtons();
             
-            // 5秒後にゲーム終了メッセージを表示
             setTimeout(() => {
                 this.updateGameStatus('ゲーム終了。新しいゲームを開始するにはページを更新してください。');
-                // ハイライトをリセット
                 document.querySelectorAll('.player-area').forEach(area => {
                     area.style.background = '';
                     area.style.border = '';
@@ -683,30 +717,22 @@ playerCall() {
                 });
             }, 800);
             
-            // ゲーム終了状態を確実に設定
             this.gamePhase = 'ended';
-            
-            
         }
     }
 
-
-
-    //ボタンの無効化
     enableBettingButtons() {
         console.log("Current Phase:", this.gamePhase, "Player:", this.currentPlayer);
-        // ゲームが終了している場合はボタンを有効化しない
         if (this.gamePhase === 'ended') {
             return;
         }
-        
         document.getElementById('checkBtn').disabled = false;
         document.getElementById('callBtn').disabled = false;
         document.getElementById('raiseBtn').disabled = false;
         document.getElementById('foldBtn').disabled = false;
         this.hideRaiseControls();
     }
-    //ボタンの有効化
+
     disableBettingButtons() {
         console.log("Current Phase:", this.gamePhase, "Player:", this.currentPlayer);
         document.getElementById('checkBtn').disabled = true;
@@ -723,7 +749,6 @@ playerCall() {
         const cardDiv = document.createElement('div');
         
         if (!isHidden) {
-            // スート記号をCSSクラス名に変換
             let suitClass = '';
             switch(card.suit) {
                 case '♥': suitClass = 'hearts'; break;
@@ -746,23 +771,18 @@ playerCall() {
         return cardDiv;
     }
 
-
-    // ラウンドを終了して勝者にポットを分配
     endRound(winner) {
-        this.gamePhase = 'waiting';
+        this.gamePhase = 'ended'; // 演出が入る前にフェーズをendedへ移行
         
-        // ポットを勝者に分配
         if (winner === 0) {
             this.playerChips += this.pot;
-            this.updateGameStatus('🎉 プレイヤーの勝利！🎉 ' + this.pot + 'チップのポットを獲得しました！');
-            // プレイヤー領域をハイライト
+            this.updateGameStatus('🎉 プレイヤーの勝利！🎉 ' + this.pot + '万のポットを獲得しました！');
             document.querySelector('.player-area:first-child').style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(139, 195, 74, 0.3))';
             document.querySelector('.player-area:first-child').style.border = '2px solid #4caf50';
             document.querySelector('.player-area:first-child').style.boxShadow = '0 0 20px rgba(76, 175, 80, 0.5)';
         } else {
             this.computerChips += this.pot;
-            this.updateGameStatus('💻 コンピューターの勝利！💻 ' + this.pot + 'チップのポットを獲得しました！');
-            // CPU領域をハイライト
+            this.updateGameStatus('💻 コンピューターの勝利！💻 ' + this.pot + '万のポットを獲得しました！');
             document.querySelector('.player-area:last-child').style.background = 'linear-gradient(135deg, rgba(244, 67, 54, 0.3), rgba(239, 83, 80, 0.3))';
             document.querySelector('.player-area:last-child').style.border = '2px solid #f44336';
             document.querySelector('.player-area:last-child').style.boxShadow = '0 0 20px rgba(244, 67, 54, 0.5)';
@@ -771,78 +791,71 @@ playerCall() {
         this.updateUI();
         this.disableBettingButtons();
         
-        // 5秒後にゲーム終了メッセージを表示
         setTimeout(() => {
             this.updateGameStatus('ゲーム終了。新しいゲームを開始するにはページを更新してください。');
-            // 新しいゲームボタンを再有効化
             document.getElementById('newGameBtn').disabled = false;
-            // ハイライトをリセット
             document.querySelectorAll('.player-area').forEach(area => {
                 area.style.background = '';
                 area.style.border = '';
                 area.style.boxShadow = '';
             });
         }, 3000);
-    
-        // ゲーム終了状態を確実に設定
-        this.gamePhase = 'ended';
-        
-
-
     }
 
+    // ★★★ HTML構造に合わせて最適化したUI更新メソッド ★★★
     updateUI() {
         console.log("Current Phase:", this.gamePhase, "Player:", this.currentPlayer);
-        // 基本情報更新
         document.getElementById('potAmount').textContent = this.pot;
         document.getElementById('playerChips').textContent = this.playerChips;
         document.getElementById('computerChips').textContent = this.computerChips;
         
-                
-        // 現在のベット状態を更新
-        const betStatusDiv = document.getElementById('betStatus');
+        // HTMLの現在のベット額テキストパーツを安全に更新
         const currentBetDisplay = document.getElementById('currentBetDisplay');
-        
-        if (this.gamePhase === 'waiting') {
-            betStatusDiv.innerHTML = 'ゲーム待機中';
-        } else if (this.currentBet === 0) {
-            betStatusDiv.innerHTML = 'チェック状態';
-        } else {
-            betStatusDiv.innerHTML = `現在のベット: <span>${this.currentBet}</span> チップ`;
+        if (currentBetDisplay) {
+            currentBetDisplay.textContent = this.currentBet;
         }
         
-        // コミュニティカード
         const communityDiv = document.getElementById('communityCards');
         communityDiv.innerHTML = '';
         this.communityCards.forEach(card => communityDiv.appendChild(this.createCardElement(card)));
         
-        // プレイヤーカード
         const playerDiv = document.getElementById('playerCards');
         playerDiv.innerHTML = '';
         this.playerHand.forEach(card => playerDiv.appendChild(this.createCardElement(card)));
         
-        // コンピューターカード
         const computerDiv = document.getElementById('computerCards');
+        communityDiv.innerHTML = ''; // 一旦クリアしてから差し替え
+        this.communityCards.forEach(card => communityDiv.appendChild(this.createCardElement(card)));
+
+        // computerHandの表示
         computerDiv.innerHTML = '';
-        const isHidden = this.gamePhase !== 'showdown' && this.gamePhase !== 'waiting';
+        // ended（勝敗決定後）または showdown の時はCPUのカードをオープンする
+        const isHidden = this.gamePhase !== 'showdown' && this.gamePhase !== 'ended' && this.gamePhase !== 'waiting';
         this.computerHand.forEach(card => computerDiv.appendChild(this.createCardElement(card, isHidden)));
         
-        // ハンドランク表示
-        if (this.gamePhase === 'showdown' && this.playerHand.length > 0) {
-            const hands = [
-                { id: 'playerHandRank', hand: this.playerHand },
-                { id: 'computerHandRank', hand: this.computerHand }
-            ];
-            
-            hands.forEach(({ id, hand }) => {
-                const div = document.getElementById(id);
-                if (div) {
-                    const bestHand = HandEvaluator.evaluateHand([...hand, ...this.communityCards]);
-                    div.textContent = bestHand.name;
+        // 役のリアルタイム常時表示ロジック（ended時も表示を維持する）
+        if (this.gamePhase !== 'waiting') {
+            // プレイヤーの役を更新
+            if (this.playerHand.length > 0 && this.playerBet >= 0) {
+                const currentBestHand = HandEvaluator.evaluateHand([...this.playerHand, ...this.communityCards]);
+                document.getElementById('playerHandRank').textContent = currentBestHand.rankName || currentBestHand.name;
+            } else if (this.playerBet === -1) {
+                document.getElementById('playerHandRank').textContent = 'フォールド';
+            }
+
+            // コンピューターの役表示（showdown または ended の時は確定役を表示）
+            if (this.computerHand.length > 0 && this.computerBet >= 0) {
+                if (this.gamePhase === 'showdown' || this.gamePhase === 'ended') {
+                    const currentBestHand = HandEvaluator.evaluateHand([...this.computerHand, ...this.communityCards]);
+                    document.getElementById('computerHandRank').textContent = currentBestHand.rankName || currentBestHand.name;
+                } else {
+                    document.getElementById('computerHandRank').textContent = '？？？';
                 }
-            });
+            } else if (this.computerBet === -1) {
+                document.getElementById('computerHandRank').textContent = 'フォールド';
+            }
         } else {
-            // ハンドランクをクリア
+            // ゲーム開始前の初期状態（waiting）のみクリア
             ['playerHandRank', 'computerHandRank'].forEach(id => {
                 const div = document.getElementById(id);
                 if (div) div.textContent = '';
@@ -850,5 +863,10 @@ playerCall() {
         }
     }
 }
+
+// 「ホームへ戻る」ボタンを押したときの処理
+document.getElementById('homeBtn').addEventListener('click', () => {
+    window.location.href = '../home.html'; 
+});
 
 const game = new PokerGame();
