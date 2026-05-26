@@ -44,7 +44,7 @@ class PokerGame {
         
         // 万とベット関連
         this.pot = 0;                       // ポット（賭け金の合計）
-        this.playerChips = 1000;            // プレイヤーの万
+        this.playerChips = parseInt(localStorage.getItem('shared_chips')) || 1000;            // プレイヤーの万
         this.computerChips = 10000000000;   // コンピューターの万
         this.currentBet = 0;                // 現在のベット額
         this.playerBet = 0;                 // プレイヤーのベット額
@@ -80,7 +80,7 @@ class PokerGame {
         
         // 参加料（100万ペリカ）に足りるかチェック
         if (this.playerChips < 100) {
-            this.updateGameStatus('万が不足しています（最低100万必要）。新しいゲームを開始できません。');
+            this.updateGameStatus('万ペリカ不足しています（最低100万ペリカ必要）。新しいゲームを開始できません。');
             this.disableBettingButtons();
             return;
         }
@@ -115,7 +115,7 @@ class PokerGame {
         this.pot = playerAnte + computerAnte;
         
         this.updateUI();
-        this.updateGameStatus('新しいゲームが開始されました！参加料として100万のアンテをベットしました。');
+        this.updateGameStatus('新しいゲームが開始されました！参加料として100万ペリカのアンテをベットしました。');
         this.enableBettingButtons();
         
         // 新しいゲームボタンを無効化
@@ -165,11 +165,11 @@ class PokerGame {
             this.currentBet = this.playerBet;  
             
             setTimeout(() => {
-                this.updateGameStatus(`${actualCallAmount}万でオールイン！余剰の${surplus}万をCPUに返却しました。`);
+                this.updateGameStatus(`${actualCallAmount}万ペリカでオールイン！余剰の${surplus}万ペリカをCPUに返却しました。`);
             }, 800);
         } else {
             setTimeout(() => {
-                this.updateGameStatus(`${callAmount}万コールしました。`);
+                this.updateGameStatus(`${callAmount}万ペリカコールしました。`);
             }, 1000);
         }
         
@@ -236,7 +236,7 @@ class PokerGame {
         const needed = additionalRaiseAmount;
         
         if (needed > this.playerChips) {
-            this.updateGameStatus(`万が不足しています。必要: ${needed}万（手持ち: ${this.playerChips}）`);
+            this.updateGameStatus(`万ペリカが不足しています。必要: ${needed}万ペリカ（手持ち: ${this.playerChips}万ペリカ）`);
             return;
         }
         
@@ -247,7 +247,7 @@ class PokerGame {
         if (this.computerBet > this.playerBet && totalBet < this.computerBet && !isAllIn) {
             const minTotalBet = this.computerBet;
             const minAdd = minTotalBet - this.playerBet;
-            this.updateGameStatus(`CPUのベット額（${this.computerBet}）に対抗するには、最低でも${minAdd}万以上を入力してください。`);
+            this.updateGameStatus(`CPUのベット額（${this.computerBet}万ペリカ）に対抗するには、最低でも${minAdd}万ペリカ以上を入力してください。`);
             return;
         }
         
@@ -263,7 +263,7 @@ class PokerGame {
         
         // プレイヤーが全額突っ込んだ（オールイン）場合の処理
         if (this.playerChips === 0) {
-            this.updateGameStatus(`プレイヤーが手持ちの${needed}万すべてを上乗せしてオールインレイズしました！`);
+            this.updateGameStatus(`プレイヤーが手持ちの${needed}万ペリカすべてを上乗せしてオールインレイズしました！`);
             
             // 相手（CPU）にコールするかフォールドするかを判断させるため、手番を回す
             this.hasActedThisRound = [false, false];
@@ -277,7 +277,7 @@ class PokerGame {
         }
         
         // 通常のレイズ時の処理
-        this.updateGameStatus(`${needed}万を追加して、合計${totalBet}万にレイズしました。`);
+        this.updateGameStatus(`${needed}万ペリカを追加して、合計${totalBet}万ペリカにレイズしました。`);
         
         this.hasActedThisRound = [false, false];
         this.hasActedThisRound[0] = true; // レイズした本人はアクション済み
@@ -387,7 +387,7 @@ class PokerGame {
     }
 
     // ★★★ 強く調整したCPU思考ロジック（羽振り調整版） ★★★
-    computerAction() {
+   computerAction() {
         console.log('思考ロジック強化版 computerAction が呼び出されました');
         
         const hand = this.computerHand;
@@ -428,18 +428,25 @@ class PokerGame {
             this.computerBet = newBet;
         };
 
-        // ==========================================
-        // CPUの羽振りを決める内部ロジック (100-500, 稀に800)
-        // ==========================================
+        // ====================================================
+        // 【修正箇所】CPUの羽振りをプレイヤーの所持金によって変える
+        // ====================================================
         const determineHafuriAmount = () => {
-            const sizeRoll = Math.random();
-            if (sizeRoll < 0.15) {
-                // 15%の確率で「稀に800」
-                return 800;
-            } else {
-                // 85%の確率で「100〜500」の100刻み
-                return (Math.floor(Math.random() * 5) + 1) * 100;
-            }
+            // プレイヤーの現在の所持チップ（chips または this.playerChips）
+            // ※お使いのゲームオブジェクトの変数名に合わせて調整してください（通常は this.playerChips や this.chips）
+            const playerChips = this.chips || this.playerChips || 1000;
+
+            // プレイヤーの所持金の「40% 〜 60%」の間でランダムに割合を決める
+            const randomRatio = 0.4 + (Math.random() * 0.2);
+            let calculatedAmount = Math.floor(playerChips * randomRatio);
+
+            // 100未満の端数を切り捨てて綺麗な数字にする（例: 4520万 ➡️ 4500万）
+            calculatedAmount = Math.floor(calculatedAmount / 100) * 100;
+
+            // 最低でも100万（または100点）はレイズするように制限
+            if (calculatedAmount < 100) calculatedAmount = 100;
+
+            return calculatedAmount;
         };
 
         // ----------------------------------------------------
@@ -468,7 +475,7 @@ class PokerGame {
             const wantsToSemiBluff = hasStrongDraw && random < 0.25;
 
             if ((wantsToValueRaise || wantsToSemiBluff) && canRaise) {
-                // 羽振り関数からベット額を決定
+                // 【連動】プレイヤーの所持金ベースで額を決定
                 let raiseSize = determineHafuriAmount();
                 
                 // 所持万を超えないように安全弁をかける
@@ -482,7 +489,7 @@ class PokerGame {
                 this.pot += addedAmount;
                 this.currentBet = totalNewBet;
                 
-                this.updateGameStatus(`${playerName}がさらに${raiseSize}万レイズしました！`);
+                this.updateGameStatus(`${playerName}がさらに${raiseSize}万ペリカレイズしました！`);
                 this.triggerCpuRaiseUI(raiseSize);
                 return;
             }
@@ -490,7 +497,7 @@ class PokerGame {
             // 通常のコール処理
             updateChipsAndBet(callAmount, this.currentBet);
             this.pot += callAmount;
-            this.updateGameStatus(`${playerName}が${callAmount}万コールしました。`);
+            this.updateGameStatus(`${playerName}が${callAmount}万ペリカコールしました。`);
             this.updateUI();
             this.disableBettingButtons();
             setTimeout(() => {
@@ -510,7 +517,7 @@ class PokerGame {
             const canBet = cpuChips >= 100;
 
             if ((isValueBet || isSemiBluff || isPureBluff) && canBet) {
-                // 羽振り関数からベット額を決定
+                // 【連動】プレイヤーの所持金ベースで額を決定
                 let betAmount = determineHafuriAmount();
                 
                 // 所持万を超えないように調整
@@ -521,7 +528,7 @@ class PokerGame {
                 this.currentBet = cpuCurrentBet + betAmount;
                 
                 let logText = isPureBluff ? "強力なブラフベット" : "ベット";
-                this.updateGameStatus(`${playerName}が${betAmount}万${logText}しました。`);
+                this.updateGameStatus(`${playerName}が${betAmount}万ペリカ${logText}しました。`);
                 this.triggerCpuRaiseUI(betAmount);
             } else {
                 this.updateGameStatus(`${playerName}がチェックしました。`);
@@ -691,7 +698,7 @@ class PokerGame {
         } else {
             const shareAmount = Math.floor(this.pot / winners.length);
             
-            comparisonMessage = `\n引き分け！${shareAmount}万ずつ獲得！`;
+            comparisonMessage = `\n引き分け！${shareAmount}万ペリカずつ獲得！`;
             this.updateGameStatus(comparisonMessage);
             
             winners.forEach(w => {
@@ -772,20 +779,23 @@ class PokerGame {
     }
 
     endRound(winner) {
+        localStorage.setItem('shared_chips', this.playerChips);
         this.gamePhase = 'ended'; // 演出が入る前にフェーズをendedへ移行
         
         if (winner === 0) {
             this.playerChips += this.pot;
-            this.updateGameStatus('🎉 プレイヤーの勝利！🎉 ' + this.pot + '万のポットを獲得しました！');
+            this.updateGameStatus('🎉 プレイヤーの勝利！🎉 ' + this.pot + '万ペリカのポットを獲得しました！');
+            // 【修正】HTMLの構造に合わせて、2番目（最後）の要素であるプレイヤーエリアを緑にハイライト
+            document.querySelector('.player-area:last-child').style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(139, 195, 74, 0.3))';
+            document.querySelector('.player-area:last-child').style.border = '2px solid #4caf50';
+            document.querySelector('.player-area:last-child').style.boxShadow = '0 0 20px rgba(76, 175, 80, 0.5)';
+        } else {
+            this.computerChips += this.pot;
+            this.updateGameStatus('💻 コンピューターの勝利！💻 ' + this.pot + '万ペリカのポットを獲得しました！');
+            // 【修正】HTMLの構造に合わせて、1番目の要素であるコンピューターエリアを赤（敗北/または敵勝利のハイライト）に変更
             document.querySelector('.player-area:first-child').style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(139, 195, 74, 0.3))';
             document.querySelector('.player-area:first-child').style.border = '2px solid #4caf50';
             document.querySelector('.player-area:first-child').style.boxShadow = '0 0 20px rgba(76, 175, 80, 0.5)';
-        } else {
-            this.computerChips += this.pot;
-            this.updateGameStatus('💻 コンピューターの勝利！💻 ' + this.pot + '万のポットを獲得しました！');
-            document.querySelector('.player-area:last-child').style.background = 'linear-gradient(135deg, rgba(244, 67, 54, 0.3), rgba(239, 83, 80, 0.3))';
-            document.querySelector('.player-area:last-child').style.border = '2px solid #f44336';
-            document.querySelector('.player-area:last-child').style.boxShadow = '0 0 20px rgba(244, 67, 54, 0.5)';
         }
         
         this.updateUI();
@@ -801,9 +811,12 @@ class PokerGame {
             });
         }, 3000);
     }
+        
 
     // ★★★ HTML構造に合わせて最適化したUI更新メソッド ★★★
     updateUI() {
+        localStorage.setItem('shared_chips', this.playerChips);
+
         console.log("Current Phase:", this.gamePhase, "Player:", this.currentPlayer);
         document.getElementById('potAmount').textContent = this.pot;
         document.getElementById('playerChips').textContent = this.playerChips;
@@ -864,9 +877,10 @@ class PokerGame {
     }
 }
 
+const game = new PokerGame();
+
 // 「ホームへ戻る」ボタンを押したときの処理
 document.getElementById('homeBtn').addEventListener('click', () => {
+    localStorage.setItem('shared_chips', game.playerChips);
     window.location.href = '../home.html'; 
 });
-
-const game = new PokerGame();
