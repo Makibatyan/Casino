@@ -130,9 +130,9 @@ function renderUI() {
     </div>
 
     <div class="stop-row">
-      <button class="btn-stop-ind" id="stop0" disabled onclick="stopReel(0)">STOP ①</button>
-      <button class="btn-stop-ind" id="stop1" disabled onclick="stopReel(1)">STOP ②</button>
-      <button class="btn-stop-ind" id="stop2" disabled onclick="stopReel(2)">STOP ③</button>
+      <button class="btn-stop-ind" id="stop0" disabled onclick="stopReel(0)">   </button>
+      <button class="btn-stop-ind" id="stop1" disabled onclick="stopReel(1)">   </button>
+      <button class="btn-stop-ind" id="stop2" disabled onclick="stopReel(2)">   </button>
     </div>
 
     <div class="main-btn-row">
@@ -320,7 +320,7 @@ function setBetMax() {
 // ─── HOME に戻る ─────────────────────────────────────
 function goHome() {
   saveShared();
-  location.href = 'home.html';   // フォルダ構成に合わせて変更してください
+  location.href = 'home/home.html';   // フォルダ構成に合わせて変更
 }
 
 // ─── ログ ────────────────────────────────────────────
