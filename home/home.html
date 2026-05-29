@@ -36,6 +36,67 @@
             format("truetype");
         }
 
+        /* 所持金表示 */
+        .money-box {
+
+            position: fixed;
+
+            width: 320px;
+
+            top: 41px;
+
+            right: 30px;
+
+            padding: 15px;
+
+            border-radius: 20px;
+
+            background: rgba(0,0,0,0.7);
+
+            border: 3px solid gold;
+
+            text-align: center;
+
+            box-shadow:
+            0 0 20px rgba(255,215,0,0.5),
+            inset 0 0 10px rgba(255,255,255,0.2);
+
+        }
+
+        /* TOTAL MONEY */
+        .money-text {
+
+            display: block;
+
+            font-family: "Oiwai";
+
+            color: gold;
+
+            font-size: 1.2em;
+
+            letter-spacing: 2px;
+
+        }
+
+        /* 金額 */
+        #money {
+
+            font-family: "Oiwai";
+
+            font-size: 3.0em;
+
+            color: white;
+
+            position: relative;
+
+            top: 5px;
+
+            text-shadow:
+                0 0 10px gold,
+                0 0 20px gold;
+
+        }
+
         /* タイトル */
         h1 {
             font-family: "Oiwai";
@@ -254,6 +315,16 @@
 
     </audio>
 
+    <div class="money-box">
+
+        <span class="money-text">TOTAL MONEY</span>
+
+        <span id="money"></span>
+
+        
+
+    </div>
+
     <h1>BUGGING</h1>
 
     <h2>このゲームは合法です</h2>
@@ -320,6 +391,52 @@
         </div>
 
     </div>
+
+    <script>
+        
+        function addMoney(amount){
+
+        let money =
+
+            parseInt(localStorage.getItem("bugging_cash")) || 1000;
+
+        money += amount;
+
+        localStorage.setItem("bugging_cash", money);
+
+        showMoney();
+
+        }
+        
+        function showMoney(){
+
+            let money =
+                parseInt(localStorage.getItem("bugging_cash"));
+
+            // 初回だけ1000をセット
+            if (money === null || isNaN(money)) {
+
+                money = 1000;
+
+                localStorage.setItem("bugging_cash", money);
+
+            }
+
+            document.getElementById("money").textContent =
+                money;
+
+        }
+        window.onload = function(){
+
+            showMoney();
+
+        }
+        
+        
+
+    </script>
+
+    <script src="money.js"></script>
 
     
 
