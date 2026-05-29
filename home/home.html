@@ -315,6 +315,16 @@
 
     </audio>
 
+    <div class="money-box">
+
+        <span class="money-text">TOTAL MONEY</span>
+
+        <span id="money"></span>
+
+        
+
+    </div>
+
     <h1>BUGGING</h1>
 
     <h2>このゲームは合法です</h2>
@@ -325,7 +335,7 @@
         <div class="coin-area">
 
             <button id="main1"
-                onclick="location.href='poker/texas-holdem-poker.html'">
+                onclick="location.href='casino/poker/texas-holdem-poker.html'">
 
                 ポーカー
 
@@ -336,10 +346,11 @@
 
         </div>
 
+        <!--大富豪-->
         <div class="coin-area">
 
             <button id="main2"
-                onclick="location.href='daifugo/index.html'">
+                onclick="location.href='casino/daifugo/index.html'">
 
             大富豪
 
@@ -353,7 +364,7 @@
         <div class="coin-area">
 
             <button id="main3"
-                onclick="location.href='slot/index.html'">
+                onclick="location.href='casino/slot/index.html'">
 
             スロット
 
@@ -370,7 +381,7 @@
         <div class="coin-area">
 
             <button id="main4"
-                onclick="location.href='blackjack/index.html'">
+                onclick="location.href='casino/blackjack/index.html'">
 
             ブラックジャック
 
@@ -398,21 +409,37 @@
 
         }
 
+        
         function showMoney(){
 
             let money =
+                parseInt(localStorage.getItem("bugging_cash"));
 
-                parseInt(localStorage.getItem("bugging_cash")) || 1000;
+            // 初回だけ1000をセット
+            if (money === null || isNaN(money)) {
 
-            document.getElementById("money").textContent = money;
+                money = 1000;
+
+                localStorage.setItem("bugging_cash", money);
+
+            }
+
+            document.getElementById("money").textContent =
+                money;
 
         }
+        window.onload = function(){
 
-        showMoney();
+            showMoney();
 
-        </script>
+        }
+        
+        
 
-        <script src="money.js"></script>
+    </script>
+
+    <script src="money.js"></script>
+
 
     
 
