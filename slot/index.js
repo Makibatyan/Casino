@@ -321,7 +321,7 @@ function setBetMax() {
 function goHome() {
   saveShared();
   location.href = '../home/home.html';   // フォルダ構成に合わせて変更してください　
-
+}
 // ─── ログ ────────────────────────────────────────────
 function addLog(msg, cls = '') {
   const log = document.getElementById('log-area');
