@@ -11,7 +11,10 @@ let gameState = {
     cpuHand: [],
     lastPlayed: { rank: 0, count: 0 },
     selectedCards: [],
-    isRevolution: false
+    isRevolution: false,
+    isElevenBack: false,
+    isGameOver: false,
+    skipNext: null
 };
 
 // カード操作ユーティリティ
@@ -57,8 +60,8 @@ function compareRanks(rank1, rank2) {
     const index1 = RANKS.indexOf(rank1);
     const index2 = RANKS.indexOf(rank2);
     
-    if (gameState.isRevolution) {
-        return index1 < index2; // 革命中は逆転
+    if (gameState.isRevolution || gameState.isElevenBack) {
+        return index1 < index2; // 革命中または11バック中は逆転
     } else {
         return index1 > index2; // 通常時
     }
@@ -83,8 +86,12 @@ function createCardElement(card, index, isClickable = true) {
         cardEl.innerText = `${card.suit}${card.rank}`;
     }
     
-    if (isClickable) {
+    if (isClickable && !gameState.isGameOver) {
         cardEl.onclick = () => toggleSelect(index, cardEl);
+        // 再描画時に選択状態を反映する
+        if (typeof index === 'number' && gameState.selectedCards.includes(index)) {
+            cardEl.classList.add('selected');
+        }
     }
     
     return cardEl;
@@ -114,7 +121,10 @@ function updateField(cards) {
 
 function updateRevolutionStatus() {
     const statusEl = document.getElementById("revolution-status");
-    if (gameState.isRevolution) {
+    if (gameState.isElevenBack) {
+        statusEl.innerText = "🔥 11バック中！";
+        statusEl.style.color = "#42a5f5";
+    } else if (gameState.isRevolution) {
         statusEl.innerText = "🔥 革命中！強さ関係が逆転しています！";
         statusEl.style.color = "#ff6b6b";
     } else {
@@ -122,12 +132,51 @@ function updateRevolutionStatus() {
     }
 }
 
+function resetTemporaryRevolution() {
+    if (gameState.isElevenBack) {
+        gameState.isElevenBack = false;
+        updateRevolutionStatus();
+    }
+}
+
 function showMessage(message) {
-    document.getElementById("msg").innerText = message;
+    const msgEl = document.getElementById("msg");
+    msgEl.innerText = message;
+    msgEl.classList.add("visible");
+
+    if (window._msgTimeout) clearTimeout(window._msgTimeout);
+    if (window._msgHideTimeout) clearTimeout(window._msgHideTimeout);
+
+    window._msgTimeout = setTimeout(() => {
+        if (!gameState.isGameOver) {
+            msgEl.classList.remove("visible");
+            window._msgHideTimeout = setTimeout(() => {
+                msgEl.innerText = "";
+                window._msgHideTimeout = null;
+            }, 300);
+        }
+        window._msgTimeout = null;
+    }, 1000);
+}
+
+function showResult(message) {
+    const msgEl = document.getElementById("msg");
+    msgEl.innerText = message;
+    msgEl.classList.add("visible");
+    msgEl.classList.add("result");
+    if (window._msgTimeout) clearTimeout(window._msgTimeout);
+    if (window._msgHideTimeout) clearTimeout(window._msgHideTimeout);
+}
+
+function setGameOver() {
+    gameState.isGameOver = true;
+    document.getElementById("play-btn").disabled = true;
+    document.getElementById("pass-btn").disabled = true;
 }
 
 //　カード選択ロジック
 function toggleSelect(index, element) {
+    if (gameState.isGameOver) return;
     if (element.classList.contains("selected")) {
         element.classList.remove("selected");
         gameState.selectedCards = gameState.selectedCards.filter(i => i !== index);
@@ -154,7 +203,7 @@ function canSelectCard(card) {
         if (nonJokerRanks.length <= 1) {
             return true;
         }
-        alert("ジョーカーは同じ数字のカードとしか組み合わせられません");
+        showMessage("ジョーカーは同じ数字のカードとしか組み合わせられません");
         return false;
     }
     
@@ -162,12 +211,12 @@ function canSelectCard(card) {
         if (nonJokerRanks.length === 0 || nonJokerRanks[0] === card.rank) {
             return true;
         }
-        alert("ジョーカーと組み合わせるには同じ数字のカードが必要です");
+        showMessage("ジョーカーと組み合わせるには同じ数字のカードが必要です");
         return false;
     }
     
     if (nonJokerRanks.length > 0 && !nonJokerRanks.includes(card.rank)) {
-        alert("同じ数字のカードのみ選べます");
+        showMessage("同じ数字のカードのみ選べます");
         return false;
     }
     
@@ -182,6 +231,13 @@ function initGame() {
     gameState.lastPlayed = { rank: 0, count: 0 };
     gameState.selectedCards = [];
     gameState.isRevolution = false;
+    gameState.isGameOver = false;
+    gameState.skipNext = null;
+    document.getElementById("play-btn").disabled = false;
+    document.getElementById("pass-btn").disabled = false;
+    const msgEl = document.getElementById("msg");
+    msgEl.classList.remove("visible", "result");
+    msgEl.innerText = "";
     
     updateRevolutionStatus();
     renderHand();
@@ -215,7 +271,28 @@ function handleSpecialCards(cards, isPlayer = true) {
         showMessage("8切り！場が流れました。" + (isPlayer ? "あなたの番です。" : "CPUの番です。"));
         gameState.lastPlayed = { rank: 0, count: 0 };
         document.getElementById("field-cards").innerHTML = "流されました";
+        resetTemporaryRevolution();
         return true; // 8切り発生
+    }
+
+    // 11バックチェック
+    if (mainCard.rank === 11) {
+        gameState.isElevenBack = true;
+        updateRevolutionStatus();
+        showMessage("11バック！場が流れている間、強さが逆転します。");
+    }
+
+    // 5スキップチェック
+    if (mainCard.rank === 5) {
+        // 次の相手ターンをスキップする
+        gameState.skipNext = isPlayer ? 'cpu' : 'player';
+        // 場はリセットしない（そのまま維持する）
+        if (isPlayer) {
+            showMessage("5が出されました！CPUのターンをスキップします。あなたの番です。");
+        } else {
+            showMessage("CPUが5を出しました！あなたのターンをスキップします。CPUの番です。");
+        }
+        return false;
     }
     
     // メッセージ表示
@@ -244,8 +321,17 @@ function playCards(cards, isPlayer = true) {
         renderHand();
         checkWin("Player");
         
+        if (gameState.isGameOver) return;
+
         if (!isEightCut) {
-            setTimeout(cpuTurn, 1000);
+            if (gameState.skipNext === 'cpu') {
+                // CPUのターンをスキップ：フィールドは既にリセット済み
+                gameState.skipNext = null;
+                // プレイヤーのターン継続のため、再描画のみ
+                renderHand();
+            } else {
+                setTimeout(cpuTurn, 1000);
+            }
         }
     } else {
         gameState.cpuHand = gameState.cpuHand.filter(c => !cards.includes(c));
@@ -254,23 +340,36 @@ function playCards(cards, isPlayer = true) {
         }
         renderHand();
         checkWin("CPU");
+
+        if (gameState.isGameOver) return;
+
+        if (!isEightCut) {
+            if (gameState.skipNext === 'player') {
+                // プレイヤーのターンをスキップ：CPUは2秒後に自動で再行動
+                gameState.skipNext = null;
+                showMessage("CPUが5を出しました：あなたのターンはスキップされます。");
+                setTimeout(cpuTurn, 2000);
+            }
+        }
     }
 }
 
 //プレイヤー操作
 document.getElementById("play-btn").onclick = () => {
-    if (gameState.selectedCards.length === 0) return;
+    if (gameState.isGameOver || gameState.selectedCards.length === 0) return;
     
     const cardsToPlay = gameState.selectedCards.map(i => gameState.playerHand[i]);
-    
+
     if (canPlayCards(cardsToPlay)) {
         playCards(cardsToPlay, true);
     } else {
-        alert("そのカードは出せません");
+        showMessage("そのカードは出せません");
     }
 };
 
 document.getElementById("pass-btn").onclick = () => {
+    if (gameState.isGameOver) return;
+    resetTemporaryRevolution();
     gameState.lastPlayed = { rank: 0, count: 0 };
     document.getElementById("field-cards").innerHTML = "流されました";
     setTimeout(cpuTurn, 1000);
@@ -340,13 +439,13 @@ function findPlayableCards(hand) {
 }
 
 function selectBestCard(playableCards) {
-    // 革命状態に応じてソート
+    // 革命状態や11バック中は強さが逆転するので、弱い手から出すようにする
     playableCards.sort((a, b) => {
         // ジョーカーは最後に使う
         if (a.rank === JOKER_RANK) return 1;
         if (b.rank === JOKER_RANK) return -1;
         
-        if (gameState.isRevolution) {
+        if (gameState.isRevolution || gameState.isElevenBack) {
             return RANKS.indexOf(b.rank) - RANKS.indexOf(a.rank);
         } else {
             return RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
@@ -357,13 +456,16 @@ function selectBestCard(playableCards) {
 }
 
 function cpuTurn() {
+    if (gameState.isGameOver) return;
     const playableCards = findPlayableCards(gameState.cpuHand);
     
     if (playableCards.length > 0) {
         const selected = selectBestCard(playableCards);
         playCards(selected.cards, false);
     } else {
+        resetTemporaryRevolution();
         gameState.lastPlayed = { rank: 0, count: 0 };
+        document.getElementById("field-cards").innerHTML = "流されました";
         showMessage("CPUがパスしました。あなたの番です。");
         renderHand();
         checkWin("CPU");
@@ -373,10 +475,12 @@ function cpuTurn() {
 //　ゲーム終了チェック
 function checkWin(playerName) {
     if (gameState.playerHand.length === 0) {
-        alert("あなたの勝ちです！");
+        setGameOver();
+        showResult("🎉 あなたの勝ちです！");
     }
     if (gameState.cpuHand.length === 0) {
-        alert("CPUの勝ちです！");
+        setGameOver();
+        showResult("💻 CPUの勝ちです！");
     }
 }
 
