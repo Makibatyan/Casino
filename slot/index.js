@@ -13,8 +13,8 @@ const KEY_PAID  = 'bugging_paid';
 const KEY_BET   = 'bugging_slot_bet';   // BET額はスロット専用で保存
 
 // ─── 初期値（home.html と合わせること）─────────────
-const INIT_CASH = 5000;
-const INIT_DEBT = 500000;
+const INIT_CASH = 100000000; // 💡 所持金1億ペリカ
+const INIT_DEBT = 500000000; // 💡 借金5億ペリカ（240億への布石）
 
 // ─── スロット定数 ────────────────────────────────────
 const SYMBOLS   = ['💎','7️⃣','🍒','🔔','🍋','🍉','🍇'];
