@@ -13,8 +13,8 @@ const KEY_PAID  = 'bugging_paid';
 const KEY_BET   = 'bugging_slot_bet';   // BET額はスロット専用で保存
 
 // ─── 初期値（home.html と合わせること）─────────────
-const INIT_CASH = 5000;
-const INIT_DEBT = 500000;
+const INIT_CASH = 100000000; // 💡 所持金1億ペリカ
+const INIT_DEBT = 500000000; // 💡 借金5億ペリカ（240億への布石）
 
 // ─── スロット定数 ────────────────────────────────────
 const SYMBOLS   = ['💎','7️⃣','🍒','🔔','🍋','🍉','🍇'];
@@ -35,7 +35,8 @@ let strips    = [[], [], []];
 
 // ─── ユーティリティ ──────────────────────────────────
 function fmt(n) {
-  return '¥' + Math.abs(Math.round(n)).toLocaleString();
+  // 💡 ペリカ表示に対応
+  return Math.abs(Math.round(n)).toLocaleString() + 'ペリカ';
 }
 
 function weightedRand() {
@@ -121,18 +122,18 @@ function renderUI() {
 
     <div class="bet-row">
       <span class="bet-label">BET</span>
-      <button class="btn-small" onclick="changeBet(-500)">－5</button>
-      <button class="btn-small" onclick="changeBet(-100)">－</button>
+      <button class="btn-small" onclick="changeBet(-1000000)">－100万</button>
+      <button class="btn-small" onclick="changeBet(-500000)">－50万</button>
       <div class="bet-display" id="disp-bet2">${fmt(bet)}</div>
-      <button class="btn-small" onclick="changeBet(100)">＋</button>
-      <button class="btn-small" onclick="changeBet(500)">+5</button>
+      <button class="btn-small" onclick="changeBet(500000)">＋50万</button>
+      <button class="btn-small" onclick="changeBet(1000000)">＋100万</button>
       <button class="btn-max"   onclick="setBetMax()">MAX</button>
     </div>
 
     <div class="stop-row">
-      <button class="btn-stop-ind" id="stop0" disabled onclick="stopReel(0)">STOP ①</button>
-      <button class="btn-stop-ind" id="stop1" disabled onclick="stopReel(1)">STOP ②</button>
-      <button class="btn-stop-ind" id="stop2" disabled onclick="stopReel(2)">STOP ③</button>
+      <button class="btn-stop-ind" id="stop0" disabled onclick="stopReel(0)">       </button>
+      <button class="btn-stop-ind" id="stop1" disabled onclick="stopReel(1)">       </button>
+      <button class="btn-stop-ind" id="stop2" disabled onclick="stopReel(2)">       </button>
     </div>
 
     <div class="main-btn-row">
@@ -143,14 +144,9 @@ function renderUI() {
     <div class="payout-table">
       <div class="payout-title">配当表</div>
       <div class="payout-grid">
-        <div class="payout-row"><span class="payout-sym">💎💎💎</span><span class="payout-mult payout-jackpot">×50 JACKPOT</span></div>
-        <div class="payout-row"><span class="payout-sym">7️⃣7️⃣7️⃣</span><span class="payout-mult">×20</span></div>
-        <div class="payout-row"><span class="payout-sym">🍒🍒🍒</span><span class="payout-mult">×10</span></div>
-        <div class="payout-row"><span class="payout-sym">🔔🔔🔔</span><span class="payout-mult">×7</span></div>
-        <div class="payout-row"><span class="payout-sym">🍋🍋🍋</span><span class="payout-mult">×5</span></div>
-        <div class="payout-row"><span class="payout-sym">🍉🍉🍉</span><span class="payout-mult">×4</span></div>
-        <div class="payout-row"><span class="payout-sym">🍇🍇🍇</span><span class="payout-mult">×3</span></div>
-        <div class="payout-row"><span class="payout-sym">🍒🍒 (2個)</span><span class="payout-mult">×1.5</span></div>
+        <div class="payout-row"><span class="payout-sym">💎💎💎 / 7️⃣7️⃣7️⃣</span><span class="payout-mult " style="color:#facc15">×4 倍（圧倒的歓喜）</span></div>
+        <div class="payout-row"><span class="payout-sym">🍒 / 🔔 / 🍋 / 🍉 / 🍇 の3揃い</span><span class="payout-mult">×2 倍（通常勝利）</span></div>
+        <div class="payout-row"><span class="payout-sym">上記以外</span><span class="payout-mult">0 倍</span></div>
       </div>
     </div>
 
@@ -197,7 +193,7 @@ function updateStats() {
 // ─── スタート ────────────────────────────────────────
 function startSpin() {
   if (spinning) return;
-  if (cash < bet) { addLog('⚠ 手持ちが不足しています', 'lose'); return; }
+  if (cash < bet) { addLog('⚠ ペリカが不足しています…！狂気の沙汰…！', 'lose'); return; }
 
   cash -= bet;
   saveShared();
@@ -263,22 +259,38 @@ function resolveResult() {
   let winLabel = 'WIN!';
 
   if (syms[0] === syms[1] && syms[1] === syms[2]) {
-    const mult = PAYOUTS[syms[0]] || 1;
-    winAmt = bet * mult;
-    if (syms[0] === '💎') {
-      winLabel = 'JACKPOT!!'; cls = 'jackpot';
-      msg = `💎 JACKPOT!! → ${fmt(winAmt)} 獲得！`;
+    // 💡 条件A：ダイヤモンドまたは7揃いは「×4倍」
+    if (syms[0] === '💎' || syms[0] === '7️⃣') {
+      winAmt = bet * 4;
+      winLabel = 'HEAVEN!!'; cls = 'jackpot';
+      msg = `🎉【至福…！】${syms[0]}揃いで ×4倍！ ${fmt(winAmt)} 獲得！`;
     } else {
+      // 💡 条件B：それ以外の図柄揃いは「×2倍」
+      winAmt = bet * 2;
       winLabel = 'WIN!'; cls = 'win';
-      msg = `${syms[0]}×3 → ${fmt(winAmt)} 獲得 (×${mult})`;
+      msg = `✨【流石…！】${syms[0]}揃いで ×2倍！ ${fmt(winAmt)} 獲得！`;
     }
-  } else if (syms.filter(s => s === '🍒').length >= 2) {
-    winAmt = Math.floor(bet * 1.5);
-    cls = 'win'; winLabel = 'WIN!';
-    msg = `🍒×2 → ${fmt(winAmt)} 獲得 (×1.5)`;
   } else {
-    msg = `${syms.join('')} … はずれ (−${fmt(bet)})`;
+    // 💡 条件C：それ以外（はずれ）は「0倍（没収）」
+    winAmt = 0;
+    msg = `どん底…！ ${syms.join('')} はずれ（0倍）`;
   }
+  //   const mult = PAYOUTS[syms[0]] || 1;
+  //   winAmt = bet * mult;
+  //   if (syms[0] === '💎') {
+  //     winLabel = 'JACKPOT!!'; cls = 'jackpot';
+  //     msg = `💎 JACKPOT!! → ${fmt(winAmt)} 獲得！`;
+  //   } else {
+  //     winLabel = 'WIN!'; cls = 'win';
+  //     msg = `${syms[0]}×3 → ${fmt(winAmt)} 獲得 (×${mult})`;
+  //   }
+  // } else if (syms.filter(s => s === '🍒').length >= 2) {
+  //   winAmt = Math.floor(bet * 1.5);
+  //   cls = 'win'; winLabel = 'WIN!';
+  //   msg = `🍒×2 → ${fmt(winAmt)} 獲得 (×1.5)`;
+  // } else {
+  //   msg = `${syms.join('')} … はずれ (−${fmt(bet)})`;
+  // }
 
   if (winAmt > 0) {
     cash += winAmt;
@@ -306,13 +318,18 @@ function resolveResult() {
 
 // ─── BET 操作 ────────────────────────────────────────
 function changeBet(delta) {
-  bet = Math.max(100, Math.min(cash || INIT_CASH, bet + delta));
+  // 💡 最小10万ペリカ、最大は手持ちか1000万ペリカ
+  const maxLimit = Math.min(cash || INIT_CASH, 10000000);
+  bet = Math.max(100000, Math.min(maxLimit, bet + delta));
+  // bet = Math.max(100, Math.min(cash || INIT_CASH, bet + delta));
   saveShared();
   updateStats();
 }
 
 function setBetMax() {
-  bet = Math.max(100, Math.min(cash, 10000));
+  // 💡 掛けれる額ベース最高峰：1000万ペリカ
+  bet = Math.max(100000, Math.min(cash, 10000000));
+  // bet = Math.max(100, Math.min(cash, 10000));
   saveShared();
   updateStats();
 }
@@ -320,9 +337,8 @@ function setBetMax() {
 // ─── HOME に戻る ─────────────────────────────────────
 function goHome() {
   saveShared();
-  location.href = 'home.html';   // フォルダ構成に合わせて変更してください
+  location.href = '../home/home.html';   // フォルダ構成に合わせて変更してください　
 }
-
 // ─── ログ ────────────────────────────────────────────
 function addLog(msg, cls = '') {
   const log = document.getElementById('log-area');
@@ -370,16 +386,64 @@ function initSlot() {
   cash     = shared.cash;
   debt     = shared.debt;
   paidDebt = shared.paid;
-  bet      = parseFloat(localStorage.getItem(KEY_BET) || 100);
-  bet      = Math.max(100, Math.min(cash, bet)); // cashを超えないよう補正
+  // 💡 初期BET額を100万ペリカに設定
+  bet      = parseFloat(localStorage.getItem(KEY_BET) || 1000000);
+  bet      = Math.max(100000, Math.min(cash, bet));
+  // bet      = parseFloat(localStorage.getItem(KEY_BET) || 100);
+  // bet      = Math.max(100, Math.min(cash, bet)); // cashを超えないよう補正
 
   spinning  = false;
   stopFlags = [false, false, false];
   stopped   = 0;
 
   renderUI();
-  addLog('🎰 スロットを開始しました', 'info');
+  addLog('🎰 命を賭した勝負が今、始まる…！', 'info');
 }
+
+// ─── YouTube BGM 設定 ────────────────────────────────
+let bgmPlayer;
+
+// 1. ページ読み込み時にYouTubeのAPIスクリプトを自動でHTMLに差し込む
+(function loadYoutubeAPI() {
+  const tag = document.createElement('script');
+  tag.src = "https://www.youtube.com/iframe_api";
+  const firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+})();
+
+// 2. APIの準備ができたら自動で呼ばれる関数
+window.onYouTubeIframeAPIReady = function() {
+  // bodyの末尾に、BGM用の隠し要素を自動作成
+  const bgmDiv = document.createElement('div');
+  bgmDiv.id = 'bgm-player';
+  document.body.appendChild(bgmDiv);
+
+  bgmPlayer = new YT.Player('bgm-player', {
+    height: '0',
+    width: '0',
+    videoId: '0is4q9mlFHU', // あなたの動画ID
+    playerVars: {
+      'playsinline': 1,
+      'loop': 1,
+      'playlist': '0is4q9mlFHU'
+    },
+    events: {
+      'onReady': (event) => {
+        event.target.mute();      // 最初は音なしで再生開始
+        event.target.playVideo();
+      }
+    }
+  });
+};
+
+// 3. ユーザーが画面のどこかをクリックしたらミュートを解除する
+window.addEventListener('click', () => {
+  if (bgmPlayer && typeof bgmPlayer.unMute === 'function') {
+    bgmPlayer.unMute();
+    bgmPlayer.setVolume(30); // 音量は0〜100（スロットの邪魔にならないよう30%程度に設定）
+    bgmPlayer.playVideo();
+  }
+}, { once: true }); // 最初の1回だけ実行
 
 // エントリーポイント
 initSlot();
