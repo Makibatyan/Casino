@@ -381,5 +381,50 @@ function initSlot() {
   addLog('🎰 スロットを開始しました', 'info');
 }
 
+// ─── YouTube BGM 設定 ────────────────────────────────
+let bgmPlayer;
+
+// 1. ページ読み込み時にYouTubeのAPIスクリプトを自動でHTMLに差し込む
+(function loadYoutubeAPI() {
+  const tag = document.createElement('script');
+  tag.src = "https://www.youtube.com/iframe_api";
+  const firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+})();
+
+// 2. APIの準備ができたら自動で呼ばれる関数
+window.onYouTubeIframeAPIReady = function() {
+  // bodyの末尾に、BGM用の隠し要素を自動作成
+  const bgmDiv = document.createElement('div');
+  bgmDiv.id = 'bgm-player';
+  document.body.appendChild(bgmDiv);
+
+  bgmPlayer = new YT.Player('bgm-player', {
+    height: '0',
+    width: '0',
+    videoId: '0is4q9mlFHU', // あなたの動画ID
+    playerVars: {
+      'playsinline': 1,
+      'loop': 1,
+      'playlist': '0is4q9mlFHU'
+    },
+    events: {
+      'onReady': (event) => {
+        event.target.mute();      // 最初は音なしで再生開始
+        event.target.playVideo();
+      }
+    }
+  });
+};
+
+// 3. ユーザーが画面のどこかをクリックしたらミュートを解除する
+window.addEventListener('click', () => {
+  if (bgmPlayer && typeof bgmPlayer.unMute === 'function') {
+    bgmPlayer.unMute();
+    bgmPlayer.setVolume(30); // 音量は0〜100（スロットの邪魔にならないよう30%程度に設定）
+    bgmPlayer.playVideo();
+  }
+}, { once: true }); // 最初の1回だけ実行
+
 // エントリーポイント
 initSlot();
