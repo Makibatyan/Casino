@@ -320,7 +320,7 @@ function setBetMax() {
 // ─── HOME に戻る ─────────────────────────────────────
 function goHome() {
   saveShared();
-  location.href = 'home/home.html';   // フォルダ構成に合わせて変更してください
+  location.href = '../home/home.html';   // フォルダ構成に合わせて変更してください
 }
 
 // ─── ログ ────────────────────────────────────────────
