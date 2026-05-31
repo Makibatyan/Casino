@@ -313,7 +313,9 @@ function resolveResult() {
   const sb = document.getElementById('btn-start');
   if (sb) sb.disabled = false;
 
-  if (cash <= 0) setTimeout(showGameOver, 900);
+  if (cash <= 0) {
+    location.href = '../home/home.html';
+  }
 }
 
 // ─── BET 操作 ────────────────────────────────────────
@@ -350,27 +352,7 @@ function addLog(msg, cls = '') {
   while (log.children.length > 30) log.removeChild(log.lastChild);
 }
 
-// ─── ゲームオーバー画面 ──────────────────────────────
-function showGameOver() {
-  document.getElementById('main-content').innerHTML = `
-    <div class="end-screen">
-      <div class="end-icon">💸</div>
-      <div class="end-title lose-title">GAME OVER</div>
-      <p class="end-sub">文無しになってしまった…<br>ホームに戻って状況を確認しよう。</p>
-      <div class="end-stats">
-        <div class="end-stat">
-          <div class="end-stat-label">借金残高</div>
-          <div class="end-stat-value" style="color:#ff6b6b">${fmt(debt)}</div>
-        </div>
-        <div class="end-stat">
-          <div class="end-stat-label">返済済み</div>
-          <div class="end-stat-value" style="color:#60a5fa">${fmt(paidDebt)}</div>
-        </div>
-      </div>
-      <button class="btn-restart" onclick="initSlot()">もう一度</button>
-      <button class="btn-gohome"  onclick="goHome()">← HOME</button>
-    </div>`;
-}
+
 
 // ─── 初期化 ──────────────────────────────────────────
 function initSlot() {
