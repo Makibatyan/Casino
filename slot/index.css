@@ -445,3 +445,8 @@ body {
   border-radius: 4px;
   transition: width 0.5s ease;
 }
+
+/* YouTubeプレイヤーを完全に画面から隠す */
+#bgm-player {
+  display: none !important;
+}
