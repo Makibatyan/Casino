@@ -990,8 +990,13 @@ document.addEventListener('click', () => {
     }
 }, { once: true }); // once: true で1回だけ実行されるようにする
 
-// 「ホームへ戻る」ボタンを押したときの処理
-document.getElementById('homeBtn').addEventListener('click', () => {
-    localStorage.setItem('bugging_cash', game.playerChips);
-    window.location.href = '../home.html'; 
-});
+// ホームに戻る直前に所持金を保存する関数
+function goHome() {
+    // 念のため game.playerChips が存在するか確認してから保存
+    if (typeof game !== 'undefined' && game.playerChips !== undefined) {
+        localStorage.setItem('bugging_cash', game.playerChips);
+    }
+    // ホームへ移動
+    location.href = '../home/home.html';
+}
+
