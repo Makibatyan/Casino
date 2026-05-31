@@ -144,17 +144,9 @@ function renderUI() {
     <div class="payout-table">
       <div class="payout-title">配当表</div>
       <div class="payout-grid">
-        // <div class="payout-row"><span class="payout-sym">💎💎💎</span><span class="payout-mult payout-jackpot">×50 JACKPOT</span></div>
-        // <div class="payout-row"><span class="payout-sym">7️⃣7️⃣7️⃣</span><span class="payout-mult">×20</span></div>
-        // <div class="payout-row"><span class="payout-sym">🍒🍒🍒</span><span class="payout-mult">×10</span></div>
-        // <div class="payout-row"><span class="payout-sym">🔔🔔🔔</span><span class="payout-mult">×7</span></div>
-        // <div class="payout-row"><span class="payout-sym">🍋🍋🍋</span><span class="payout-mult">×5</span></div>
-        // <div class="payout-row"><span class="payout-sym">🍉🍉🍉</span><span class="payout-mult">×4</span></div>
-        // <div class="payout-row"><span class="payout-sym">🍇🍇🍇</span><span class="payout-mult">×3</span></div>
-        // <div class="payout-row"><span class="payout-sym">🍒🍒 (2個)</span><span class="payout-mult">×1.5</span></div>
         <div class="payout-row"><span class="payout-sym">💎💎💎 / 7️⃣7️⃣7️⃣</span><span class="payout-mult " style="color:#facc15">×4 倍（圧倒的歓喜）</span></div>
         <div class="payout-row"><span class="payout-sym">🍒 / 🔔 / 🍋 / 🍉 / 🍇 の3揃い</span><span class="payout-mult">×2 倍（通常勝利）</span></div>
-        <div class="payout-row"><span class="payout-sym">上記以外</span><span class="payout-mult">0 倍（ゴミ屑…！）</span></div>
+        <div class="payout-row"><span class="payout-sym">上記以外</span><span class="payout-mult">0 倍</span></div>
       </div>
     </div>
 
