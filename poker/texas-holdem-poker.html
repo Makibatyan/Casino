@@ -259,6 +259,8 @@
             color: #ffcccc;
         }
 
+        /* --- 前からある他のCSSルール --- */
+
         /* コミュニティカード */
         .community-section {
             display: flex;
@@ -391,7 +393,7 @@
         }
 
         .bet-input {
-            width: 80px;
+            width: 200px;
             background: #0a0000;
             border: 1px solid rgba(255, 59, 48, 0.4);
             border-radius: 6px;
@@ -431,18 +433,58 @@
             margin-left: 6px;
             font-weight: bold;
         }
+
+
+        /* ===================================================
+        【文字版】オールインの時に四つ隅をざわざわさせるCSS
+        =================================================== */
+        .zawazawa-text {
+            position: fixed;
+            font-family: 'Georgia', 'Hiragino Mincho ProN', serif; /* 不気味さを出すために明朝体っぽく */
+            font-size: 2.5rem;        /* 文字の大きさ */
+            font-weight: bold;
+            color: #c00000;           /* 血のような赤色（好みの色に変えてOK） */
+            text-shadow: 0 0 10px rgba(0,0,0,0.8); /* 文字の後ろに黒い影を入れて見やすく */
+            line-height: 1.2;
+            opacity: 0;               /* 普段は透明 */
+            pointer-events: none;     /* クリックの邪魔をしない */
+            transition: opacity 1s ease-in-out;
+            z-index: 9999;            /* 最前面に表示 */
+        }
+
+        /* 四つ隅の位置合わせ */
+        .zawa-top-left     { top: 40px; left: 40px; }
+        .zawa-top-right    { top: 40px; right: 40px; } 
+        .zawa-bottom-left  { bottom: 40px; left: 40px; }
+        .zawa-bottom-right { bottom: 40px; right: 40px; }
+
+        /* ざわざわと不気味に震えるアニメーション */
+        @keyframes zawaVibration {
+            0%   { transform: translate(0, 0) scale(1); }
+            20%  { transform: translate(-2px, 2px) scale(1.03); }
+            40%  { transform: translate(1px, -1px) scale(0.98); }
+            60%  { transform: translate(-1px, -2px) scale(1.05); }
+            80%  { transform: translate(2px, 1px) scale(0.97); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* オールイン状態（bodyに all-in-active クラスがついた時）にうっすら表示して震わせる */
+        body.all-in-active .zawazawa-text {
+            opacity: 0.5; /* 透過度（0.5 = 半透明。もっと薄くしたければ 0.3 とかにしてください） */
+            animation: zawaVibration 0.5s infinite linear; /* 高速でガタガタ震えます */
+        }
     </style>
 </head>
 <body>
-
-    <button id="homeBtn">← ホームへ戻る</button>
-
+    <audio id="bgm" src="casino 2.mp3" loop></audio>
+    <button id="homeBtn" onclick="goHome()">← ホームへ戻る</button>
+    
     <div class="game-container">
         <header>
             <h1>TEXAS HOLD'EM</h1>
             <div class="pot-container">
                 <span class="pot-label">TOTAL POT</span>
-                <div class="pot-amount">$<span id="potAmount">0</span></div>
+                <div class="pot-amount"><span id="potAmount">0</span>ペリカ</div>
             </div>
         </header>
         
@@ -466,7 +508,7 @@
             <div class="player-area" id="playerSection">
                 <div class="player-info">
                     <span>YOU</span>
-                    <span class="chips"><span id="playerChips">1000</span>万ペリカ</span>
+                    <span class="chips"><span id="playerChips">1000</span>ペリカ</span>
                 </div>
                 <div class="player-cards" id="playerCards"></div>
                 <div class="hand-rank" id="playerHandRank"></div>
@@ -490,6 +532,11 @@
         </div>
     </div>
 
+    <div class="zawazawa-text zawa-top-left">ざわ…<br>　　ざわ…</div>
+    <div class="zawazawa-text zawa-top-right">　　　ざわ… <br>ざわ…</div>
+    <div class="zawazawa-text zawa-bottom-left">　　ざわ…<br>ざわ…</div>
+    <div class="zawazawa-text zawa-bottom-right"> ざわ…<br>　　ざわ…</div>
+    
     <script src="handEvaluator.js"></script>
     <script src="poker.js"></script>
 </body>
