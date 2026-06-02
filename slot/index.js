@@ -345,7 +345,7 @@ function resolveResult() {
     // 💡 条件C：それ以外（はずれ）は「0倍（没収）」
     winAmt = 0;
     msg = `どん底…！ ${syms.join('')} はずれ（0倍）`;
-
+  }
   //   const mult = PAYOUTS[syms[0]] || 1;
   //   winAmt = bet * mult;
   //   if (syms[0] === '💎') {
