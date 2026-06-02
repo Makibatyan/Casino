@@ -14,6 +14,7 @@ const SOUND_FILES = {
 
 const KEY_VOLUME = "bugging_volume";
 const DEFAULT_VOLUME = 0.8;
+const DEFAULT_BGM_VIDEO_ID = "Ois4q9mlFHU";
 
 const Sound = {
   ctx: null,
@@ -22,8 +23,9 @@ const Sound = {
   presetGain: 0.9,
   preset: "real",
   clips: {},
-  bgmEl: null,
+  bgmPlayer: null,
   bgmStarted: false,
+  bgmVideoId: DEFAULT_BGM_VIDEO_ID,
 
   get enabled() {
     return this.volume > 0.001;
@@ -54,9 +56,22 @@ const Sound = {
     if (this.master) {
       this.master.gain.value = this.volume * this.presetGain;
     }
-    if (this.bgmEl) {
-      this.bgmEl.volume = this.volume;
-      this.bgmEl.muted = this.volume <= 0.001;
+    this._applyBgmVolume();
+  },
+
+  _applyBgmVolume() {
+    const player = this.bgmPlayer;
+    if (!player || typeof player.setVolume !== "function") return;
+    try {
+      const vol = Math.round(this.volume * 100);
+      if (this.volume <= 0.001) {
+        player.mute();
+      } else {
+        player.unMute();
+        player.setVolume(vol);
+      }
+    } catch {
+      /* プレイヤー未準備 */
     }
   },
 
@@ -439,28 +454,92 @@ const Sound = {
   },
 
   playBgm() {
-    if (!this.bgmEl) return;
-    this.bgmEl.muted = this.volume <= 0.001;
-    this.bgmEl.volume = this.volume;
-    void this.bgmEl.play()
-      .then(() => {
-        this.bgmStarted = true;
-      })
-      .catch(() => {});
+    const player = this.bgmPlayer;
+    if (!player || typeof player.playVideo !== "function") return;
+    try {
+      this._applyBgmVolume();
+      player.playVideo();
+      this.bgmStarted = true;
+    } catch {
+      /* 自動再生ブロック等 */
+    }
+  },
+
+  _createYoutubeBgm() {
+    if (this.bgmPlayer) return;
+
+    let host = document.getElementById("bgm-player");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "bgm-player";
+      host.className = "bgm-player-host";
+      host.setAttribute("aria-hidden", "true");
+      document.body.appendChild(host);
+    }
+
+    const videoId =
+      document.body?.dataset?.bgmVideoId || DEFAULT_BGM_VIDEO_ID;
+
+    this.bgmPlayer = new YT.Player("bgm-player", {
+      height: "0",
+      width: "0",
+      videoId,
+      playerVars: {
+        autoplay: 1,
+        playsinline: 1,
+        loop: 1,
+        playlist: videoId,
+        controls: 0,
+        disablekb: 1,
+        fs: 0,
+        modestbranding: 1,
+        rel: 0,
+      },
+      events: {
+        onReady: (event) => {
+          this._applyBgmVolume();
+          if (this.volume > 0.001) {
+            try {
+              event.target.playVideo();
+              this.bgmStarted = true;
+            } catch {
+              /* ユーザー操作待ち */
+            }
+          }
+        },
+      },
+    });
+  },
+
+  _loadYoutubeAPI() {
+    if (window.YT && window.YT.Player) {
+      this._createYoutubeBgm();
+      return;
+    }
+
+    const prevReady = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof prevReady === "function") prevReady();
+      this._createYoutubeBgm();
+    };
+
+    if (document.getElementById("youtube-iframe-api")) return;
+
+    const tag = document.createElement("script");
+    tag.id = "youtube-iframe-api";
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScript = document.getElementsByTagName("script")[0];
+    firstScript.parentNode.insertBefore(tag, firstScript);
   },
 
   initBgm() {
-    this.bgmEl = document.getElementById("bgm");
-    if (!this.bgmEl) return;
-
-    const url = document.body?.dataset?.bgmUrl || "../home/bgm.mp3";
-    if (!this.bgmEl.getAttribute("src")) {
-      this.bgmEl.src = url;
-    }
+    this.bgmVideoId =
+      document.body?.dataset?.bgmVideoId || DEFAULT_BGM_VIDEO_ID;
 
     this.loadVolume();
     this._applyMasterGain();
     this.updateVolumeUI();
+    this._loadYoutubeAPI();
 
     document.body.addEventListener(
       "click",
@@ -470,7 +549,5 @@ const Sound = {
       },
       { once: true },
     );
-
-    this.playBgm();
   },
 };
