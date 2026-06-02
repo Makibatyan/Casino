@@ -1,3 +1,89 @@
+const cardPlaySound = new Audio('card_play.mp3');
+const cardPlaySound2 = new Audio('card_play2.mp3');
+const raiseSound = new Audio('raise_se.mp3');
+
+const gameBgm = new Audio('bgm.mp3');
+gameBgm.loop = true;
+gameBgm.volume = 0.30; // 音量調整
+
+const betBgm = new Audio('bet_bgm.mp3'); 
+betBgm.loop = true;
+betBgm.volume = 0.3;
+
+// CPUの10捨て自動処理
+function cpuTenDiscard() {
+    if (!gameState.tenDiscardMode) return;
+    // 弱いカードから優先して捨てる
+    let discard = gameState.cpuHand.slice(0, gameState.tenDiscardCount);
+    gameState.cpuHand = gameState.cpuHand.filter((_, i) => i >= gameState.tenDiscardCount);
+    gameState.tenDiscardMode = false;
+    gameState.tenDiscardCount = 0;
+    gameState.tenDiscardSelected = [];
+    showMessage(`CPUが${discard.length}枚捨てました`);
+    renderHand();
+    checkWin("CPU");
+    if (!gameState.isGameOver) setTimeout(() => {
+        showMessage("あなたの番です。");
+        renderHand();
+    }, 800);
+}
+// 10捨てUI表示
+function renderTenDiscardUI() {
+    const handDiv = document.getElementById("player-hand");
+    handDiv.innerHTML = "";
+    gameState.playerHand.forEach((card, index) => {
+        const cardEl = createCardElement(card, index, true);
+        // 10捨て選択用の挙動
+        cardEl.onclick = () => toggleTenDiscardSelect(index, cardEl);
+        if (gameState.tenDiscardSelected.includes(index)) {
+            cardEl.classList.add('selected');
+        }
+        handDiv.appendChild(cardEl);
+    });
+    // 決定ボタン
+    let confirmBtn = document.getElementById("ten-discard-btn");
+    if (!confirmBtn) {
+        confirmBtn = document.createElement("button");
+        confirmBtn.id = "ten-discard-btn";
+        confirmBtn.innerText = "このカードで捨てる";
+        confirmBtn.style.marginLeft = "16px";
+        handDiv.parentNode.appendChild(confirmBtn);
+    }
+    confirmBtn.onclick = confirmTenDiscard;
+}
+
+function toggleTenDiscardSelect(index, element) {
+    if (!gameState.tenDiscardMode) return;
+    if (element.classList.contains("selected")) {
+        element.classList.remove("selected");
+        gameState.tenDiscardSelected = gameState.tenDiscardSelected.filter(i => i !== index);
+        return;
+    }
+    if (gameState.tenDiscardSelected.length >= gameState.tenDiscardCount) {
+        showMessage(`${gameState.tenDiscardCount}枚まで選択できます`);
+        return;
+    }
+    element.classList.add("selected");
+    gameState.tenDiscardSelected.push(index);
+}
+
+function confirmTenDiscard() {
+    if (gameState.tenDiscardSelected.length !== gameState.tenDiscardCount) {
+        showMessage(`${gameState.tenDiscardCount}枚選んでください`);
+        return;
+    }
+    // 選択したカードを手札から削除
+    gameState.playerHand = gameState.playerHand.filter((_, i) => !gameState.tenDiscardSelected.includes(i));
+    gameState.tenDiscardMode = false;
+    gameState.tenDiscardCount = 0;
+    gameState.tenDiscardSelected = [];
+    // 10捨てUIを消す
+    const btn = document.getElementById("ten-discard-btn");
+    if (btn) btn.remove();
+    renderHand();
+    checkWin("Player");
+    if (!gameState.isGameOver) setTimeout(cpuTurn, 1000);
+}
 // 定数と初期設定
 const SUITS = ["♠", "♥", "♦", "♣"];
 const RANKS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 1, 2]; // 大富豪の強さ順
@@ -14,7 +100,13 @@ let gameState = {
     isRevolution: false,
     isElevenBack: false,
     isGameOver: false,
-    skipNext: null
+    skipNext: null,
+    tenDiscardMode: false, // 10捨て中か
+    tenDiscardCount: 0,    // 捨てる枚数
+    tenDiscardSelected: [], // プレイヤーが選択した捨て札
+
+    pelika: parseInt(localStorage.getItem('bugging_cash')) || 100000000, 
+    currentBet: 10000000
 };
 
 // カード操作ユーティリティ
@@ -86,7 +178,8 @@ function createCardElement(card, index, isClickable = true) {
         cardEl.innerText = `${card.suit}${card.rank}`;
     }
     
-    if (isClickable && !gameState.isGameOver) {
+    // プレイヤーのターンがスキップされている場合はクリックを無効化
+    if (isClickable && !gameState.isGameOver && gameState.skipNext !== 'player') {
         cardEl.onclick = () => toggleSelect(index, cardEl);
         // 再描画時に選択状態を反映する
         if (typeof index === 'number' && gameState.selectedCards.includes(index)) {
@@ -164,6 +257,8 @@ function showResult(message) {
     msgEl.innerText = message;
     msgEl.classList.add("visible");
     msgEl.classList.add("result");
+    
+    // 💡 通常のメッセージ自動消去タイマーを完全に止める（結果を画面に残すため）
     if (window._msgTimeout) clearTimeout(window._msgTimeout);
     if (window._msgHideTimeout) clearTimeout(window._msgHideTimeout);
 }
@@ -176,7 +271,7 @@ function setGameOver() {
 
 //　カード選択ロジック
 function toggleSelect(index, element) {
-    if (gameState.isGameOver) return;
+    if (gameState.isGameOver || gameState.tenDiscardMode) return; // 10捨て中は通常選択不可
     if (element.classList.contains("selected")) {
         element.classList.remove("selected");
         gameState.selectedCards = gameState.selectedCards.filter(i => i !== index);
@@ -194,11 +289,12 @@ function toggleSelect(index, element) {
 }
 
 function canSelectCard(card) {
-    const selectedCards = gameState.selectedCards;
-    const hasJoker = selectedCards.some(i => isJoker(gameState.playerHand[i]));
-    const nonJokerCards = selectedCards.filter(i => !isJoker(gameState.playerHand[i]));
-    const nonJokerRanks = [...new Set(nonJokerCards.map(i => gameState.playerHand[i].rank))];
-    
+    // 選択済みカードの実体を取得
+    const selectedCards = gameState.selectedCards.map(i => gameState.playerHand[i]);
+    const hasJoker = selectedCards.some(c => isJoker(c));
+    const nonJokerCards = selectedCards.filter(c => !isJoker(c));
+    const nonJokerRanks = [...new Set(nonJokerCards.map(c => c.rank))];
+
     if (isJoker(card)) {
         if (nonJokerRanks.length <= 1) {
             return true;
@@ -206,7 +302,7 @@ function canSelectCard(card) {
         showMessage("ジョーカーは同じ数字のカードとしか組み合わせられません");
         return false;
     }
-    
+
     if (hasJoker) {
         if (nonJokerRanks.length === 0 || nonJokerRanks[0] === card.rank) {
             return true;
@@ -214,16 +310,15 @@ function canSelectCard(card) {
         showMessage("ジョーカーと組み合わせるには同じ数字のカードが必要です");
         return false;
     }
-    
+
     if (nonJokerRanks.length > 0 && !nonJokerRanks.includes(card.rank)) {
         showMessage("同じ数字のカードのみ選べます");
         return false;
     }
-    
+
     return true;
 }
 
-//　ゲームロジック
 function initGame() {
     gameState.deck = shuffleDeck(createDeck());
     gameState.playerHand = sortHand(gameState.deck.slice(0, 14));
@@ -233,14 +328,44 @@ function initGame() {
     gameState.isRevolution = false;
     gameState.isGameOver = false;
     gameState.skipNext = null;
-    document.getElementById("play-btn").disabled = false;
-    document.getElementById("pass-btn").disabled = false;
+    
+    // UIの初期化
+    document.getElementById("play-btn").disabled = true; 
+    document.getElementById("pass-btn").disabled = true; 
     const msgEl = document.getElementById("msg");
     msgEl.classList.remove("visible", "result");
     msgEl.innerText = "";
     
     updateRevolutionStatus();
     renderHand();
+
+    // 💰 【ここを調整】破産チェック（最低賭け金が1000万ペリカになったので、未満なら1億にリセット）
+    if (!gameState.pelika || gameState.pelika < 10000000) {
+        alert("破産……！地下強制労働行き……！\n\n（新たな軍資金として、1億ペリカを支給して復活します）");
+        gameState.pelika = 100000000; // 初期値を1億ペリカに
+        localStorage.setItem('bugging_cash', gameState.pelika);
+    }
+    
+    // 所持ペリカの画面表示
+    document.getElementById("player-pelika").innerText = Number(gameState.pelika).toLocaleString();
+
+    // ベット用UIを表示し、メインのゲーム画面を半透明化
+    document.getElementById("bet-setup-area").style.display = "block";
+    document.getElementById("game-container").style.opacity = "0.5";
+    
+    // スライダーを1000万ペリカ単位で全額まで動かせるように設定
+    const maxBet = gameState.pelika; // 上限は現在の所持金すべて
+    const slider = document.getElementById("bet-slider");
+    
+    slider.min = "10000000";         // 💡 最低賭け金を 1,000万 ペリカに設定
+    slider.max = String(maxBet);    // 💡 上限は自分の所持金全額
+    slider.step = "10000000";       // 💡 つまみを動かしたときの単位を 1,000万 ペリカ刻みに変更
+    slider.value = "10000000";      // 💡 初期値を 1,000万 ペリカに設定
+    
+    document.getElementById("bet-slider-val").innerText = "10,000,000"; 
+    document.getElementById("current-bet-display").innerText = "10,000,000";
+
+    betBgm.play().catch(e => console.log("BGM再生エラー（ユーザー操作前）:", e));
 }
 
 function canPlayCards(cards) {
@@ -256,6 +381,19 @@ function handleSpecialCards(cards, isPlayer = true) {
     const hasJoker = cards.some(isJoker);
     const nonJokerCards = cards.filter(c => !isJoker(c));
     
+        // 大革命判定
+        if (cards.length === 4 && cards.every(c => c.rank === 2)) {
+            showMessage("大革命！無条件勝利！");
+            gameState.superRevolution = true;
+            return false;
+        }
+        // ラッキー７判定
+        if (cards.length === 3 && cards.every(c => c.rank === 7)) {
+            showMessage("ラッキー７！");
+            gameState.lucky7 = true;
+            return true; // ここでtrueを返すことでplayCardsで即returnできる
+    }
+
     // 革命チェック
     if (cards.length >= 4) {
         gameState.isRevolution = !gameState.isRevolution;
@@ -266,12 +404,36 @@ function handleSpecialCards(cards, isPlayer = true) {
         showMessage(revolutionMsg);
     }
     
+
+    // 10捨てチェック
+    if (mainCard.rank === 10) {
+        gameState.tenDiscardMode = true;
+        gameState.tenDiscardCount = cards.length;
+        gameState.tenDiscardSelected = [];
+        if (isPlayer) {
+            showMessage(`10捨て発動！${cards.length}枚手札から捨ててください`);
+            renderTenDiscardUI();
+        } else {
+            setTimeout(cpuTenDiscard, 800);
+        }
+        return true; // 10捨て発動
+    }
+
     // 8切りチェック
     if (mainCard.rank === 8) {
-        showMessage("8切り！場が流れました。" + (isPlayer ? "あなたの番です。" : "CPUの番です。"));
-        gameState.lastPlayed = { rank: 0, count: 0 };
-        document.getElementById("field-cards").innerHTML = "流されました";
-        resetTemporaryRevolution();
+        showMessage("8切り！" + (isPlayer ? "あなたの番です。" : "CPUの番です。"));
+        // 場にカードは一度表示した後、短時間で流す（カードが見えるように遅延）
+        setTimeout(() => {
+            gameState.lastPlayed = { rank: 0, count: 0 };
+            const field = document.getElementById("field-cards");
+            if (field) field.innerHTML = "流されました";
+
+            cardPlaySound2.play().catch(error => {
+                console.log("音声を再生できませんでした（ユーザーの操作が必要です）:", error);
+            });
+
+            resetTemporaryRevolution();
+        }, 600);
         return true; // 8切り発生
     }
 
@@ -279,7 +441,7 @@ function handleSpecialCards(cards, isPlayer = true) {
     if (mainCard.rank === 11) {
         gameState.isElevenBack = true;
         updateRevolutionStatus();
-        showMessage("11バック！場が流れている間、強さが逆転します。");
+        showMessage("11バック！一時的な革命状態");
     }
 
     // 5スキップチェック
@@ -288,9 +450,9 @@ function handleSpecialCards(cards, isPlayer = true) {
         gameState.skipNext = isPlayer ? 'cpu' : 'player';
         // 場はリセットしない（そのまま維持する）
         if (isPlayer) {
-            showMessage("5が出されました！CPUのターンをスキップします。あなたの番です。");
+            showMessage("5スキップ！あなたの番です。");
         } else {
-            showMessage("CPUが5を出しました！あなたのターンをスキップします。CPUの番です。");
+            showMessage("5スキップ！\nあなたのターンがスキップされました");
         }
         return false;
     }
@@ -309,47 +471,69 @@ function handleSpecialCards(cards, isPlayer = true) {
 
 function playCards(cards, isPlayer = true) {
     const mainCard = getMainCard(cards);
+    
+// カードを出すたびに音を再生
+    cardPlaySound.play().catch(error => {
+        console.log("音声を再生できませんでした（ユーザーの操作が必要です）:", error);
+    });
+
+
+    // 大革命判定
+    if (cards.length === 4 && cards.every(c => c.rank === 2)) {
+        showMessage("大革命！無条件勝利！");
+        gameState.superRevolution = true;
+    }
+    // ラッキー７判定
+    else if (cards.length === 3 && cards.every(c => c.rank === 7)) {
+        showMessage("ラッキー７！");
+        gameState.lucky7 = true;
+    }
+
     gameState.lastPlayed = { rank: mainCard.rank, count: cards.length };
     updateField(cards);
-    
-    const isEightCut = handleSpecialCards(cards, isPlayer);
-    
-    // 手札から削除
+
+    // 出したカードを手札から削除
     if (isPlayer) {
         gameState.playerHand = gameState.playerHand.filter((_, i) => !gameState.selectedCards.includes(i));
         gameState.selectedCards = [];
         renderHand();
-        checkWin("Player");
-        
-        if (gameState.isGameOver) return;
-
-        if (!isEightCut) {
-            if (gameState.skipNext === 'cpu') {
-                // CPUのターンをスキップ：フィールドは既にリセット済み
-                gameState.skipNext = null;
-                // プレイヤーのターン継続のため、再描画のみ
-                renderHand();
-            } else {
-                setTimeout(cpuTurn, 1000);
-            }
+        // 💡 特殊勝利フラグが立っている、または手札が0枚なら勝敗チェックへ
+        if (gameState.superRevolution || gameState.lucky7 || gameState.playerHand.length === 0) {
+            checkWin("Player");
+            return;
         }
     } else {
         gameState.cpuHand = gameState.cpuHand.filter(c => !cards.includes(c));
-        if (isEightCut) {
-            setTimeout(cpuTurn, 1500);
-        }
         renderHand();
-        checkWin("CPU");
+        if (gameState.superRevolution || gameState.lucky7 || gameState.cpuHand.length === 0) {
+            checkWin("CPU");
+            return;
+        }
+    }
 
-        if (gameState.isGameOver) return;
-
-        if (!isEightCut) {
-            if (gameState.skipNext === 'player') {
-                // プレイヤーのターンをスキップ：CPUは2秒後に自動で再行動
-                gameState.skipNext = null;
-                showMessage("CPUが5を出しました：あなたのターンはスキップされます。");
-                setTimeout(cpuTurn, 2000);
+    const isSpecial = handleSpecialCards(cards, isPlayer);
+    if (isSpecial) {
+        if (mainCard.rank === 8) {
+            if (!isPlayer) {
+                setTimeout(cpuTurn, 1500);
             }
+        }
+        return;
+    }
+
+    // 通常のターン継続処理
+    if (isPlayer) {
+        if (gameState.skipNext === 'cpu') {
+            gameState.skipNext = null;
+            renderHand();
+        } else {
+            setTimeout(cpuTurn, 1000);
+        }
+    } else {
+        if (gameState.skipNext === 'player') {
+            gameState.skipNext = null;
+            showMessage("CPUが5を出しました：あなたのターンはスキップされます。");
+            setTimeout(cpuTurn, 2000);
         }
     }
 }
@@ -357,7 +541,11 @@ function playCards(cards, isPlayer = true) {
 //プレイヤー操作
 document.getElementById("play-btn").onclick = () => {
     if (gameState.isGameOver || gameState.selectedCards.length === 0) return;
-    
+    if (gameState.skipNext === 'player') {
+        showMessage("あなたのターンはスキップされています。");
+        return;
+    }
+
     const cardsToPlay = gameState.selectedCards.map(i => gameState.playerHand[i]);
 
     if (canPlayCards(cardsToPlay)) {
@@ -369,9 +557,17 @@ document.getElementById("play-btn").onclick = () => {
 
 document.getElementById("pass-btn").onclick = () => {
     if (gameState.isGameOver) return;
+    if (gameState.skipNext === 'player') {
+        showMessage("あなたのターンはスキップされています。");
+        return;
+    }
     resetTemporaryRevolution();
     gameState.lastPlayed = { rank: 0, count: 0 };
     document.getElementById("field-cards").innerHTML = "流されました";
+
+    cardPlaySound2.play().catch(error => {
+        console.log("音声を再生できませんでした（ユーザーの操作が必要です）:", error);
+    });
     setTimeout(cpuTurn, 1000);
 };
 // CPUロジック
@@ -466,23 +662,221 @@ function cpuTurn() {
         resetTemporaryRevolution();
         gameState.lastPlayed = { rank: 0, count: 0 };
         document.getElementById("field-cards").innerHTML = "流されました";
+
+        cardPlaySound2.play().catch(error => {
+            console.log("音声を再生できませんでした（ユーザーの操作が必要です）:", error);
+        });
+
         showMessage("CPUがパスしました。あなたの番です。");
         renderHand();
         checkWin("CPU");
     }
 }
 
-//　ゲーム終了チェック
 function checkWin(playerName) {
     if (gameState.playerHand.length === 0) {
         setGameOver();
-        showResult("🎉 あなたの勝ちです！");
+        
+        let multiplier = 2;
+        let winReason = "勝利……！";
+        
+        if (gameState.superRevolution) {
+            multiplier = 100; 
+            winReason = "圧倒的大革命勝利……っ！！(100倍)";
+        } else if (gameState.lucky7) {
+            multiplier = 70;
+            winReason = "ラッキー7奇跡の勝利……っ！！(70倍)";
+        } else if (gameState.isRevolution) {
+            multiplier = 4;
+            winReason = "革命勝利……っ！！(4倍)";
+        }
+
+        let winAmount = gameState.currentBet * multiplier;
+        gameState.pelika += winAmount;
+        localStorage.setItem('bugging_cash', gameState.pelika);
+        
+        // フラグをリセット
+        gameState.superRevolution = false;
+        gameState.lucky7 = false;
+        
+        document.getElementById("player-pelika").innerText = gameState.pelika.toLocaleString();
+        showResult(`🎉 ${winReason}\n【+${winAmount.toLocaleString()} ペリカ】を獲得……！`);
+        
+
+        
+        if (gameState.pelika >= 24000000000) {
+            saveShared(); // 必要に応じて現在の状態を保存
+            setTimeout(() => {
+                window.location.href = '../home/home.html?clear=true';
+            }, 2000);
+            return; // 遷移するので以降の処理を止める
+        }
+        
+        showEndGameChoices(); 
+        return;
     }
-    if (gameState.cpuHand.length === 0) {
+    
+    // CPUの勝利条件（通常勝利、またはCPUの手番での特殊勝利）
+    if (gameState.cpuHand.length === 0 || ((gameState.superRevolution || gameState.lucky7) && playerName === "CPU")) {
         setGameOver();
-        showResult("💻 CPUの勝ちです！");
+        
+        let multiplier = 2;
+        let lossReason = "CPUの勝ち……！";
+
+        if (gameState.superRevolution) {
+            multiplier = 100; 
+            lossReason = "CPUの圧倒的大革命勝利……っ！！(100倍)";
+        } else if (gameState.lucky7) {
+            multiplier = 70;
+            lossReason = "CPUのラッキー7勝利……っ！！(70倍)";
+        } else if (gameState.isRevolution) {
+            multiplier = 4;
+            lossReason = "CPUの革命勝利……っ！！(4倍)";
+        }
+        
+        let lossAmount = gameState.currentBet * multiplier;
+        gameState.pelika -= lossAmount;
+        localStorage.setItem('bugging_cash', gameState.pelika);
+        
+        // フラグをリセット
+        gameState.superRevolution = false;
+        gameState.lucky7 = false;
+        
+        document.getElementById("player-pelika").innerText = gameState.pelika.toLocaleString();
+        showResult(`💻 ${lossReason}\n【-${lossAmount.toLocaleString()} ペリカ】猛省せよ……！`);
+        if (gameState.pelika < 10000000) {
+            setTimeout(() => {
+                alert("破産……！！\n\nくそっっっっっっっっっっっ！\nなんでだよぉぉぉぉぉ！！！！！！");
+                
+                
+                localStorage.setItem('bugging_cash', 0);
+                
+                // 強制的に退出（ホームへ戻る）
+                window.location.href = '../home/home.html?gameover=true';
+            }, 1500); 
+            return; 
+        }
+        showEndGameChoices(); 
     }
 }
+
+// 「ホームへ戻る」ボタンを押したときの処理
+document.getElementById('homeBtn').addEventListener('click', () => {
+    // 1. ゲーム進行中の場合は確認ダイアログを出す
+    if (!gameState.isGameOver) {
+        const leave = confirm(`ゲームの途中ですが、ホーム画面に戻りますか？\n\n※今賭けている${gameState.currentBet.toLocaleString()} ペリカは没収されます`);
+        if (!leave) return; // キャンセルされたら何もしない
+
+        gameState.pelika -= gameState.currentBet;
+        localStorage.setItem('bugging_cash', gameState.pelika);
+    }
+
+    // 2. 裏で動いているメッセージ用タイマー（setTimeout）を安全に停止
+    if (window._msgTimeout) clearTimeout(window._msgTimeout);
+    if (window._msgHideTimeout) clearTimeout(window._msgHideTimeout);
+
+    // 3. ゲームを強制終了状態にして、これ以上のCPUの処理（10捨てやターン進行）の発生を防ぐ
+    gameState.isGameOver = true;
+
+    // 4. 指定のホーム画面へ遷移
+    window.location.href = '../home/home.html'; 
+});
+
+// 💰 ベットスライダーのリアルタイム表示変更
+document.getElementById("bet-slider").oninput = (e) => {
+    const val = parseInt(e.target.value);
+    document.getElementById("bet-slider-val").innerText = val.toLocaleString();
+};
+
+// 💰 「勝負開始（レイズ…！）」ボタンを押したときの処理
+document.getElementById("start-with-bet-btn").onclick = () => {
+    const selectedBet = parseInt(document.getElementById("bet-slider").value);
+
+    raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
+
+    gameState.currentBet = selectedBet;
+    document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString() + " ペリカ";
+    
+    // ベット画面を隠してゲーム画面をアクティブにする
+    document.getElementById("bet-setup-area").style.display = "none";
+    document.getElementById("game-container").style.opacity = "1";
+    
+    // ゲーム用ボタンを有効化して勝負スタート！
+    document.getElementById("play-btn").disabled = false;
+    document.getElementById("pass-btn").disabled = false;
+    showMessage("勝負開始……！ざわざわ……");
+};
+
+if (document.getElementById("bet-slider")) {
+    document.getElementById("bet-slider").oninput = (e) => {
+        const val = parseInt(e.target.value) || 10000000;
+        document.getElementById("bet-slider-val").innerText = val.toLocaleString() + " ペリカ";
+    };
+}
+
+// 💰 「勝負開始（レイズ…！）」ボタンの処理
+if (document.getElementById("start-with-bet-btn")) {
+    document.getElementById("start-with-bet-btn").onclick = () => {
+        const selectedBet = parseInt(document.getElementById("bet-slider").value) || 10000000;
+        
+        raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
+        
+        gameState.currentBet = selectedBet;
+        document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString();
+        
+        betBgm.pause();
+        betBgm.currentTime = 0;
+
+        gameBgm.play().catch(e => console.error("BGM再生エラー:", e));
+
+        document.getElementById("bet-setup-area").style.display = "none";
+        document.getElementById("game-container").style.opacity = "1";
+        
+        document.getElementById("play-btn").disabled = false;
+        document.getElementById("pass-btn").disabled = false;
+        showMessage("勝負開始……！ざわざわ……");
+    };
+}
+
+// 💡 ゲーム終了後に「もう一度」か「退出」かを選ばせるUIを生成する関数
+function showEndGameChoices() {
+    const controlsDiv = document.getElementById("controls");
+    
+    // 既存の「出す」「パス」ボタンを一旦見えなくする
+    document.getElementById("play-btn").style.display = "none";
+    document.getElementById("pass-btn").style.display = "none";
+    
+    // すでに選択ボタンが作られていなければ作成する
+    if (!document.getElementById("retry-btn")) {
+        const choiceArea = document.createElement("div");
+        choiceArea.id = "end-choices";
+        choiceArea.style.marginTop = "20px";
+        choiceArea.style.display = "flex";
+        choiceArea.style.justify = "center";
+        choiceArea.style.gap = "20px";
+        
+        // 「もう一戦（リロード）」ボタン
+        const retryBtn = document.createElement("button");
+        retryBtn.id = "retry-btn";
+        retryBtn.innerText = "⚡️ もう一戦する（続行）";
+        retryBtn.onclick = () => {
+            location.reload(); // ページをリロードして次のゲームへ
+        };
+        
+        // 「退出する（ホームへ）」ボタン
+        const leaveBtn = document.createElement("button");
+        leaveBtn.id = "leave-btn";
+        leaveBtn.innerText = "🚪 退出する（ホームへ）";
+        leaveBtn.onclick = () => {
+            window.location.href = '../home/home.html'; // ホーム画面へ遷移
+        };
+        
+        choiceArea.appendChild(retryBtn);
+        choiceArea.appendChild(leaveBtn);
+        controlsDiv.appendChild(choiceArea);
+    }
+}
+
 
 //　ゲーム開始 
 initGame();

@@ -32,6 +32,16 @@ let stopped   = 0;
 let rafIds    = [null, null, null];
 let positions = [0, 0, 0];
 let strips    = [[], [], []];
+let savedCash = localStorage.getItem(KEY_CASH);
+
+
+cash = (savedCash !== null) ? parseInt(savedCash, 10) : 100000000;
+
+
+if (isNaN(cash)) {
+    cash = INIT_CASH;
+    localStorage.setItem(KEY_CASH, cash);
+}
 
 // ─── カイジ風セリフの定義（通常時 vs 1億以上の大金持ち時） ──────────────────
 const KAIJI_SLOT_LINES = {
@@ -335,12 +345,6 @@ function resolveResult() {
     // 💡 条件C：それ以外（はずれ）は「0倍（没収）」
     winAmt = 0;
     msg = `どん底…！ ${syms.join('')} はずれ（0倍）`;
-    // 💡 はずれた時もショックで少しざわつかせる
-    triggerZawa(2);
-  }
-
-  // 💡 結果に応じたセリフを喋らせる
-  setKaijiLine(resultSit);
 
   //   const mult = PAYOUTS[syms[0]] || 1;
   //   winAmt = bet * mult;
@@ -377,10 +381,11 @@ function resolveResult() {
   saveShared();
   updateStats();
 
+  // index.js の resolveResult 関数内
   const sb = document.getElementById('btn-start');
   if (sb) sb.disabled = false;
 
-  if (cash <= 0) setTimeout(showGameOver, 900);
+
 }
 
 // ─── BET 操作 ────────────────────────────────────────
@@ -419,9 +424,7 @@ function addLog(msg, cls = '') {
 
 // ─── ゲームオーバー画面 ──────────────────────────────
 function showGameOver() {
-  // 💡 ゲームオーバー時は強烈にざわつかせる
-  triggerZawa(8);
-  
+
   document.getElementById('main-content').innerHTML = `
     <div class="end-screen">
       <div class="end-icon">💸</div>
