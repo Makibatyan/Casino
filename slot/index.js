@@ -33,6 +33,22 @@ let rafIds    = [null, null, null];
 let positions = [0, 0, 0];
 let strips    = [[], [], []];
 
+// ─── カイジ風セリフの定義（通常時 vs 1億以上の大金持ち時） ──────────────────
+const KAIJI_SLOT_LINES = {
+  normal: {
+    start: ["「ここから先は勝つだけだ」", "「運命は自分の手で切り開く——」"],
+    spin: ["「回せっ…！うねりを出せ…！」", "「止まるな…！神よ、俺の右腕を導け…！」"],
+    win: ["「勝った…！この調子だ！」", "「よしっ…！借金返済への大きな一歩…！」"],
+    lose: ["「くそっ…まだ終わりじゃない」", "「次だ…次こそ必ず取り返す…！」"]
+  },
+  rich: { // 💡 ローカルストレージ（手持ち）が1億ペリカ以上の時
+    start: ["「フフ…1億超えの大金、ここでさらに膨らませる…！」", "「金が金を呼ぶ…圧倒的悦楽の始まりだ…！」"],
+    spin: ["「狂気…！1回で動くペリカが脳を焼く…！」", "「ガタガタぬかすな…！張るだけだ、全額…！」"],
+    win: ["「圧倒的至福…！これぞ強運の持ち主…！」", "「ククク…計算通り、いやそれ以上…！」"],
+    lose: ["「チッ…かすり傷だ。この程度のペリカ、痛くも痒くもない」", "「いいだろう…焦るな。次で全てを呑み込んでやる」"]
+  }
+};
+
 // ─── ユーティリティ ──────────────────────────────────
 function fmt(n) {
   // 💡 ペリカ表示に対応
@@ -58,6 +74,46 @@ function makeStrip() {
 function getVisible(col) {
   const idx = Math.round(positions[col] / ITEM_H) % strips[col].length;
   return strips[col][(idx + strips[col].length) % strips[col].length];
+}
+
+// ─── セリフコントロール（金額分岐付き） ──────────────────
+function setKaijiLine(situation) {
+  const dialogueEl = document.getElementById('kaiji-dialogue');
+  if (!dialogueEl) return;
+
+  // 1億ペリカ以上なら 'rich'、それ未満なら 'normal' を選択
+  const isRich = cash >= 100000000;
+  const pool = isRich ? KAIJI_SLOT_LINES.rich[situation] : KAIJI_SLOT_LINES.normal[situation];
+  
+  const line = pool[Math.floor(Math.random() * pool.length)];
+  dialogueEl.textContent = line;
+  
+  // アニメーションのリセット
+  dialogueEl.style.animation = "none";
+  void dialogueEl.offsetWidth;
+  dialogueEl.style.animation = "fadeIn 0.4s ease-out";
+}
+
+// ─── ざわざわ演出エフェクト ──────────────────────────────
+function triggerZawa(count = 3) {
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const zawa = document.createElement('div');
+      zawa.className = 'zawa-text';
+      zawa.textContent = 'ざわ…';
+      
+      // 画面のランダムな位置に配置
+      zawa.style.top = Math.random() * 80 + 10 + '%';
+      zawa.style.left = Math.random() * 80 + 10 + '%';
+      // サイズもランダム
+      zawa.style.fontSize = Math.random() * 1.5 + 1.5 + 'rem';
+      
+      document.body.appendChild(zawa);
+      
+      // アニメーション終了後に消去
+      setTimeout(() => zawa.remove(), 1500);
+    }, i * 300); // 少しずつずらして出現
+  }
 }
 
 // ─── localStorage 読み書き ───────────────────────────
@@ -203,6 +259,10 @@ function startSpin() {
   stopFlags = [false, false, false];
   stopped   = 0;
 
+  // 💡 スピン開始時のセリフ変更とざわざわ
+  setKaijiLine('spin');
+  triggerZawa(4);
+
   const wl = document.getElementById('win-line');
   const wt = document.getElementById('win-text');
   if (wl) wl.classList.remove('active');
@@ -257,6 +317,7 @@ function resolveResult() {
   let msg      = '';
   let cls      = 'lose';
   let winLabel = 'WIN!';
+  let resultSit = 'lose'; // セリフ連動用
 
   if (syms[0] === syms[1] && syms[1] === syms[2]) {
     // 💡 条件A：ダイヤモンドまたは7揃いは「×4倍」
@@ -274,7 +335,13 @@ function resolveResult() {
     // 💡 条件C：それ以外（はずれ）は「0倍（没収）」
     winAmt = 0;
     msg = `どん底…！ ${syms.join('')} はずれ（0倍）`;
+    // 💡 はずれた時もショックで少しざわつかせる
+    triggerZawa(2);
   }
+
+  // 💡 結果に応じたセリフを喋らせる
+  setKaijiLine(resultSit);
+
   //   const mult = PAYOUTS[syms[0]] || 1;
   //   winAmt = bet * mult;
   //   if (syms[0] === '💎') {
@@ -352,6 +419,9 @@ function addLog(msg, cls = '') {
 
 // ─── ゲームオーバー画面 ──────────────────────────────
 function showGameOver() {
+  // 💡 ゲームオーバー時は強烈にざわつかせる
+  triggerZawa(8);
+  
   document.getElementById('main-content').innerHTML = `
     <div class="end-screen">
       <div class="end-icon">💸</div>
