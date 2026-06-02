@@ -881,23 +881,7 @@ class PokerGame {
                 this.updateGameStatus('破産しました…強制退室します。');
                 localStorage.setItem('bugging_cash', 0); // ローカルストレージも0に更新
                 
-                // 遷移前に状態を保存してホームへ
-                // （saveSharedは既存の関数なのでそのまま使用）
-                if (typeof saveShared === 'function') saveShared();
 
-                // 破産フラグを付けてホームへ移動
-                location.href = '../home/home.html?gameover=true';
-                return;
-            }
-
-            
-            
-            if (parseInt(this.playerChips, 10) >= 24000000000) {
-                saveShared();
-                setTimeout(() => {
-                        location.href = '../home/home.html?clear=true';
-                    }, 2000);
-                return;
             }
 
             this.updateGameStatus('ゲーム終了。新しいゲームを開始するにはページを更新してください。');
