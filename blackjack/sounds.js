@@ -14,7 +14,7 @@ const SOUND_FILES = {
 
 const KEY_VOLUME = "bugging_volume";
 const DEFAULT_VOLUME = 0.8;
-const DEFAULT_BGM_VIDEO_ID = "Ois4q9mlFHU";
+const DEFAULT_BGM_VIDEO_ID = "0is4q9mlFHU";
 
 const Sound = {
   ctx: null,
@@ -485,7 +485,7 @@ const Sound = {
       width: "0",
       videoId,
       playerVars: {
-        autoplay: 1,
+        autoplay: 0,
         playsinline: 1,
         loop: 1,
         playlist: videoId,
@@ -498,12 +498,12 @@ const Sound = {
       events: {
         onReady: (event) => {
           this._applyBgmVolume();
-          if (this.volume > 0.001) {
+          if (!this.bgmStarted && this.volume > 0.001) {
             try {
               event.target.playVideo();
               this.bgmStarted = true;
             } catch {
-              /* ユーザー操作待ち */
+              /* 自動再生ブロック時はクリック待ち */
             }
           }
         },
@@ -541,6 +541,10 @@ const Sound = {
     this.updateVolumeUI();
     this._loadYoutubeAPI();
 
+    // 読み込み直後に再生を試行（ホーム画面と同様）
+    this.playBgm();
+
+    // 自動再生がブロックされた場合、最初のクリックで再生
     document.body.addEventListener(
       "click",
       () => {
