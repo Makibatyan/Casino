@@ -5,12 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>カイジのブラックジャック</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles-fx.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
 </head>
-<body>
+<body data-home-url="../home/home.html" data-bgm-video-id="Ois4q9mlFHU">
   <div class="bg-pattern" aria-hidden="true"></div>
+  <div id="fx-overlay" class="fx-overlay" aria-hidden="true"></div>
+  <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
+  <div id="screen-transition" class="screen-transition" aria-hidden="true"></div>
+  <div id="vignette-tension" class="vignette-tension" aria-hidden="true"></div>
 
   <!-- スタート画面 -->
   <div id="start-screen" class="screen active">
@@ -21,11 +26,14 @@
         <span class="kaiji-face">開司</span>
       </div>
       <p id="start-quote" class="kaiji-quote">「俺は負けたままじゃ終われない…」</p>
-      <label class="bankroll-setup">
-        <span>初期所持コイン</span>
-        <input type="number" id="initial-bankroll" min="100" max="999999" value="10000" step="100">
-      </label>
+      <dl class="wallet-summary">
+        <div><dt>手持ち</dt><dd><strong id="start-cash">5,000</strong> ペリカ</dd></div>
+        <div><dt>借金残高</dt><dd><strong id="start-debt">500,000</strong> ペリカ</dd></div>
+        <div><dt>返済累計</dt><dd><strong id="start-paid">0</strong> ペリカ</dd></div>
+      </dl>
+      <p class="wallet-hint">※ スロットとデータ共有（localStorage）</p>
       <button type="button" id="btn-start" class="btn btn-gold">ゲーム開始</button>
+      <button type="button" id="btn-home-start" class="btn btn-secondary btn-home-link">ホームに戻る</button>
     </div>
   </div>
 
@@ -33,26 +41,44 @@
   <div id="game-screen" class="screen">
     <header class="hud">
       <div class="hud-block">
-        <span class="hud-label">所持コイン</span>
-        <span id="bankroll" class="hud-value">10,000</span>
+        <span class="hud-label">手持ち</span>
+        <span id="cash" class="hud-value">5,000</span>
+        <span class="hud-sub">借金 <strong id="debt">500,000</strong></span>
+        <span class="hud-sub">返済 <strong id="paid">0</strong></span>
       </div>
       <div class="hud-block center">
         <span class="hud-label">今回の獲得</span>
         <span id="session-coins" class="hud-value accent">0</span>
+        <div class="sound-preset-row">
+          <span class="preset-label">音質</span>
+          <button type="button" id="btn-preset-a" class="btn-preset" title="やや控えめ">A</button>
+          <button type="button" id="btn-preset-e" class="btn-preset active" title="リアル（推奨）">E</button>
+        </div>
       </div>
       <div class="hud-block right">
         <span class="hud-label">連勝</span>
         <span id="win-streak" class="hud-value">0</span>
+        <div class="volume-control" title="音量">
+          <span id="volume-icon" class="volume-icon" aria-hidden="true">🔊</span>
+          <input type="range" id="volume-slider" class="volume-slider" min="0" max="100" value="80" aria-label="音量" aria-valuemin="0" aria-valuemax="100">
+        </div>
+        <button type="button" id="btn-home" class="btn btn-home" title="ホームへ（戦闘中はベットは戻りません）">ホーム</button>
       </div>
     </header>
+
+    <div id="heat-meter" class="heat-meter" aria-label="台の熱">
+      <span class="heat-label-text">台の熱</span>
+      <div class="heat-track"><div id="heat-fill" class="heat-fill"></div></div>
+      <span id="heat-label" class="heat-status">普通</span>
+    </div>
 
     <section class="kaiji-panel" aria-live="polite">
       <div class="kaiji-avatar" aria-hidden="true">開</div>
       <p id="kaiji-dialogue" class="kaiji-dialogue">「さあ、賭けの時間だ…」</p>
     </section>
 
-    <main class="table">
-      <section class="hand-area dealer-area">
+    <main id="game-table" class="table">
+      <section id="dealer-area" class="hand-area dealer-area">
         <h2>ディーラー <span id="dealer-score" class="score"></span></h2>
         <div id="dealer-cards" class="cards"></div>
       </section>
@@ -61,22 +87,25 @@
         <p id="game-message" class="game-message"></p>
         <div id="bet-panel" class="bet-panel">
           <p class="bet-label">ベット額を選べ</p>
+          <p id="max-bet-hint" class="max-bet-hint">最大ベット: <strong id="max-bet">0</strong> ペリカ</p>
+          <p id="bet-error" class="bet-error" role="alert"></p>
           <div class="bet-chips">
             <button type="button" class="chip" data-bet="100">100</button>
             <button type="button" class="chip" data-bet="500">500</button>
             <button type="button" class="chip" data-bet="1000">1K</button>
             <button type="button" class="chip" data-bet="2500">2.5K</button>
             <button type="button" class="chip" data-bet="5000">5K</button>
+            <button type="button" class="chip chip-allin" data-bet="allin">ALL IN</button>
           </div>
           <div class="bet-custom">
             <input type="number" id="custom-bet" min="1" placeholder="任意額" step="50">
             <button type="button" id="btn-place-bet" class="btn btn-gold">ベットする</button>
           </div>
-          <p class="current-bet">現在のベット: <strong id="current-bet">0</strong> コイン</p>
+          <p class="current-bet">現在のベット: <strong id="current-bet">0</strong> ペリカ</p>
         </div>
       </div>
 
-      <section class="hand-area player-area">
+      <section id="player-area" class="hand-area player-area">
         <h2>あなた <span id="player-score" class="score"></span></h2>
         <div id="player-cards" class="cards"></div>
       </section>
@@ -95,12 +124,15 @@
     <div class="start-card gameover-card">
       <h1>破産</h1>
       <p id="gameover-quote" class="kaiji-quote">「まだ…終わってない…」</p>
-      <p>最終所持: <strong id="final-bankroll">0</strong> コイン</p>
-      <p>セッション獲得: <strong id="final-session">0</strong> コイン</p>
-      <button type="button" id="btn-restart" class="btn btn-gold">最初から</button>
+      <p>最終手持ち: <strong id="final-cash">0</strong> ペリカ</p>
+      <p>セッション獲得: <strong id="final-session">0</strong> ペリカ</p>
+      <button type="button" id="btn-restart" class="btn btn-gold">ホームに戻る</button>
     </div>
   </div>
 
+  <div id="bgm-player" class="bgm-player-host" aria-hidden="true"></div>
+  <script src="sounds.js"></script>
+  <script src="effects.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
