@@ -283,8 +283,8 @@ body {
   display: flex;
   gap: 0.75rem;            /* 💡 隙間を広げて押しやすく */
   width: 100%;
-  max-width: 460px;
-  margin-bottom: 1rem;
+  max-width: 900px;
+  margin-bottom: 0.75rem;
 }
 
 .btn-stop-ind {
