@@ -384,7 +384,7 @@
 
         .bet-adjust-btn {
             background: #3a0000;
-            padding: 6px 18px;
+            padding: 6px 24px;
             font-size: 0.8rem;
             border-radius: 12px;
             color: white;
@@ -393,7 +393,7 @@
         }
 
         .bet-input {
-            width: 200px;
+            width: 180px;
             background: #0a0000;
             border: 1px solid rgba(255, 59, 48, 0.4);
             border-radius: 6px;
@@ -493,7 +493,7 @@
         <div class="table-area">
             <div class="player-area" id="computerSection">
                 <div class="player-info">
-                    <span>CPU</span>
+                    <span>ハンチョウ</span>
     <span id="computerChips" style="display: none;"></span>                    <span id="cpuRaiseStatus" style="display: none;">レイズ: <span id="cpuRaiseAmount">0</span></span>
                 </div>
                 <div class="player-cards" id="computerCards"></div>
@@ -524,13 +524,18 @@
         </div>
         
         <div class="bet-controls" id="betControls" style="display: none;">
-            <button id="decreaseBetBtn" class="bet-adjust-btn">−100万ペリカ</button>
+            <button id="decreaseBetBtn" class="bet-adjust-btn">−1000万ペリカ</button>
             <input type="number" id="betAmount" class="bet-input" min="10" step="10" value="10">
-            <button id="increaseBetBtn" class="bet-adjust-btn">+100万ペリカ</button>
+            <button id="increaseBetBtn" class="bet-adjust-btn">+1000万ペリカ</button>
             <button id="confirmRaiseBtn" class="bet-confirm-btn">確定</button>
             <button id="cancelRaiseBtn" class="bet-adjust-btn" style="background: #111;">×</button>
         </div>
     </div>
+
+    <audio id="bgm" src="casino 2.mp3" loop></audio>
+    <audio id="clickSe" src="決定ボタンを押す50.mp3"></audio>
+    <audio id="cardFlipSe" src="カードをめくる.mp3"></audio>
+    <audio id="impactSe" src="文字表示の衝撃音3.mp3"></audio>
 
     <div class="zawazawa-text zawa-top-left">ざわ…<br>　　ざわ…</div>
     <div class="zawazawa-text zawa-top-right">　　　ざわ… <br>ざわ…</div>
