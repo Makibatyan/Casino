@@ -5,7 +5,66 @@
      bugging_debt  : 借金残高
      bugging_paid  : 返済済み累計
    ===================================================== */
+// ─── 効果音生成（Web Audio API） ──────────────────────
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+function playSound(type) {
+  // ブラウザのオーディオコンテキストが停止している場合は再開
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  const now = audioCtx.currentTime;
+
+  if (type === 'start') {
+    // スタートボタン：重みのある「ズゥン！」という音
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+    gain.gain.setValueAtTime(0.5, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  } 
+  else if (type === 'stop') {
+    // ストップボタン：カチッとした硬い金属音
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.setValueAtTime(200, now + 0.05);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+  else if (type === 'win') {
+    // 勝利時：ピキピキピキーン！という高揚感のある音
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(300, now);
+    osc.frequency.linearRampToValueAtTime(600, now + 0.1);
+    osc.frequency.linearRampToValueAtTime(900, now + 0.2);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+    osc.start(now);
+    osc.stop(now + 0.4);
+  }
+  else if (type === 'jackpot') {
+    // 大当たり（7 or 💎）：圧倒的至福のファンファーレ風
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(523.25, now); // ド
+    osc.frequency.setValueAtTime(659.25, now + 0.1); // ミ
+    osc.frequency.setValueAtTime(783.99, now + 0.2); // ソ
+    osc.frequency.setValueAtTime(1046.50, now + 0.3); // ド（高）
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+    osc.start(now);
+    osc.stop(now + 0.6);
+  }
+}
    
 // ─── 共有 localStorage キー ──────────────────────────
 const KEY_CASH  = 'bugging_cash';
@@ -261,6 +320,9 @@ function startSpin() {
   if (spinning) return;
   if (cash < bet) { addLog('⚠ ペリカが不足しています…！狂気の沙汰…！', 'lose'); return; }
 
+  // 💡 ここに追記：スタート音を鳴らす
+  playSound('start');
+  
   cash -= bet;
   saveShared();
   updateStats();

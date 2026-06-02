@@ -519,3 +519,30 @@ body {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── 追記：光るボタン演出 ────────────────────────── */
+
+/* リール回転中、有効化されたストップボタンを明滅させる */
+.btn-stop-ind:not(:disabled) {
+  animation: pulse-glow 1.2s infinite alternate;
+  border-color: var(--gold-light);
+}
+
+@keyframes pulse-glow {
+  0% {
+    background: linear-gradient(180deg, var(--wine-glow), var(--wine-light));
+    box-shadow: 0 0 8px rgba(196, 61, 82, 0.5), inset 0 0 4px rgba(255, 215, 0, 0.2);
+  }
+  100% {
+    background: linear-gradient(180deg, var(--wine-light), var(--wine));
+    box-shadow: 0 0 18px rgba(196, 61, 82, 0.9), 0 0 8px rgba(214, 168, 75, 0.4);
+    color: var(--gold-light);
+  }
+}
+
+/* ボタンを押した瞬間のカチッとした沈み込みエフェクト */
+.btn-stop-ind:active:not(:disabled),
+.btn-start:active:not(:disabled) {
+  transform: scale(0.96);
+  filter: brightness(1.2);
+}
