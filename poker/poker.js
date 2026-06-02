@@ -881,21 +881,7 @@ class PokerGame {
                 this.updateGameStatus('破産しました…強制退室します。');
                 localStorage.setItem('bugging_cash', 0); // ローカルストレージも0に更新
                 
-                // 1.5秒だけ破産メッセージを見せてからホームへ戻る
-                setTimeout(() => {
-                    window.location.href = '../home.html';
-                }, 1500);
-                return; // ここで処理を終了し、下の「新しいゲーム」ボタン復活などはさせない
-            }
 
-            if (this.playerChips >= 24000000000) {
-                this.updateGameStatus('240億ペリカ達成…！ホームに戻ります。');
-                
-                setTimeout(() => {
-                    window.location.href = '../home.html';
-                }, 1500);
-
-                return; // 以降の処理を中断
             }
 
             this.updateGameStatus('ゲーム終了。新しいゲームを開始するにはページを更新してください。');

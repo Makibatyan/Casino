@@ -44,7 +44,7 @@
 
     <div id="game-over-screen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; text-align:center; color:white; padding-top:200px;">
         <h1>GAME OVER</h1>
-        <p style="font-size: 2em; font-family: 'Oiwai';">所持金が尽きました……</p>
+        <p style="font-size: 2em; font-family: 'Oiwai';">破産してしまった.....</p>
         <button onclick="resetMoney()" style="width:300px; height:100px; border-radius:50px; font-size:2em; cursor:pointer;">人生やり直す</button>
     </div>
 
@@ -52,7 +52,7 @@
     <div id="clear-screen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; color:gold; text-align:center; z-index:9999; padding-top:200px;">
     <h1 style="font-size: 5em;">借金完済！</h1>
     <p style="font-size: 2em;">あなたは240億を稼ぎ出し、自由を手に入れた。</p>
-    <button onclick="localStorage.clear(); location.reload();" style="font-size: 1.5em;">最初から遊ぶ</button>
+    <button onclick="resetMoney()" style="font-size: 1.5em;">最初から遊ぶ</button>
 </div>
     <script src="script.js"></script>
 </body>
