@@ -6,6 +6,7 @@
      bugging_paid  : 返済済み累計
    ===================================================== */
 
+   
 // ─── 共有 localStorage キー ──────────────────────────
 const KEY_CASH  = 'bugging_cash';
 const KEY_DEBT  = 'bugging_debt';
