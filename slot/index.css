@@ -256,8 +256,8 @@ body {
   color: var(--gold);
   border: 1px solid var(--gold-dark);
   font-family: var(--font-display);
-  font-size: 0.8rem;
-  padding: 0.4rem 0.75rem;
+  font-size: 0.9rem;       /* 💡 少し大きく */
+  padding: 0.5rem 1rem;    /* 💡 横幅を広く */
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
@@ -281,46 +281,47 @@ body {
 /* ストップボタン行 */
 .stop-row {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;            /* 💡 隙間を広げて押しやすく */
   width: 100%;
   max-width: 460px;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .btn-stop-ind {
   flex: 1;
   background: linear-gradient(180deg, var(--wine-light), var(--wine));
   color: var(--text);
-  border: 1px solid var(--gold-dark);
+  border: 2px solid var(--gold-dark);
   font-family: var(--font-display);
-  font-size: 0.9rem;
-  padding: 0.6rem;
-  border-radius: 6px;
+  font-size: 1.3rem;       /* 💡 文字サイズを1.3倍に拡大 */
+  padding: 1.25rem 0;      /* 💡 縦幅を2倍以上に拡大（圧倒的押しごたえ） */
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
 }
 .btn-stop-ind:hover:not(:disabled) {
   background: linear-gradient(180deg, var(--wine-glow), var(--wine-light));
-  box-shadow: 0 0 12px rgba(196, 61, 82, 0.4);
+  box-shadow: 0 0 16px rgba(196, 61, 82, 0.6);
 }
-.btn-stop-ind:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-stop-ind:disabled { opacity: 0.2; cursor: not-allowed; }
 
 /* メイン操作（START / HOME） */
 .main-btn-row {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   width: 100%;
   max-width: 900px;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .btn-main {
   flex: 1;
   font-family: var(--font-display);
-  font-size: 0.95rem;
-  letter-spacing: 0.12em;
-  padding: 0.75rem;
-  border-radius: 6px;
+  font-size: 1.4rem;       /* 💡 STARTの文字をドカンと大きく */
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  padding: 1.2rem;         /* 💡 縦幅をガッツリ拡大 */
+  border-radius: 8px;
   border: none;
   cursor: pointer;
   transition: all 0.15s;
@@ -329,15 +330,16 @@ body {
 .btn-start {
   background: linear-gradient(180deg, var(--gold-light), var(--gold));
   color: var(--wine-dark);
-  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
-.btn-start:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(212, 168, 75, 0.4); transform: translateY(-2px); }
+.btn-st.btn-start:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(212, 168, 75, 0.5); transform: translateY(-2px); }
 .btn-start:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 .btn-home {
   background: transparent;
   color: var(--text-muted);
-  border: 1px solid var(--felt-edge);
+  border: 2px solid var(--felt-edge); /* 💡 枠線を太く */
+  font-size: 1.1rem;       /* 💡 HOMEに戻るボタンも適度に大きく */
 }
 .btn-home:hover { background: rgba(255,255,255,0.05); }
 
