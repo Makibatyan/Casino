@@ -12,18 +12,88 @@ const SOUND_FILES = {
   voiceEven: "sounds/voice-even.mp3",
 };
 
+const KEY_VOLUME = "bugging_volume";
+const DEFAULT_VOLUME = 0.8;
+
 const Sound = {
   ctx: null,
   master: null,
-  enabled: true,
+  volume: DEFAULT_VOLUME,
+  presetGain: 0.9,
   preset: "real",
   clips: {},
+  bgmEl: null,
+  bgmStarted: false,
+
+  get enabled() {
+    return this.volume > 0.001;
+  },
+
+  loadVolume() {
+    try {
+      const raw = localStorage.getItem(KEY_VOLUME);
+      if (raw === null) return;
+      const v = parseFloat(raw);
+      if (Number.isFinite(v)) {
+        this.volume = Math.min(1, Math.max(0, v));
+      }
+    } catch {
+      /* プライベートモード等 */
+    }
+  },
+
+  saveVolume() {
+    try {
+      localStorage.setItem(KEY_VOLUME, String(this.volume));
+    } catch {
+      /* プライベートモード等 */
+    }
+  },
+
+  _applyMasterGain() {
+    if (this.master) {
+      this.master.gain.value = this.volume * this.presetGain;
+    }
+    if (this.bgmEl) {
+      this.bgmEl.volume = this.volume;
+      this.bgmEl.muted = this.volume <= 0.001;
+    }
+  },
+
+  setVolume(value) {
+    this.volume = Math.min(1, Math.max(0, value));
+    this.saveVolume();
+    this._applyMasterGain();
+    this.updateVolumeUI();
+  },
+
+  updateVolumeUI() {
+    const slider =
+      typeof els !== "undefined" && els.volumeSlider
+        ? els.volumeSlider
+        : document.getElementById("volume-slider");
+    const icon =
+      typeof els !== "undefined" && els.volumeIcon
+        ? els.volumeIcon
+        : document.getElementById("volume-icon");
+
+    if (slider) {
+      slider.value = String(Math.round(this.volume * 100));
+      slider.setAttribute("aria-valuenow", slider.value);
+    }
+    if (icon) {
+      if (this.volume <= 0) icon.textContent = "🔇";
+      else if (this.volume <= 0.35) icon.textContent = "🔈";
+      else if (this.volume <= 0.7) icon.textContent = "🔉";
+      else icon.textContent = "🔊";
+    }
+  },
 
   init() {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       this.master = this.ctx.createGain();
-      this.master.gain.value = 0.9;
+      this._applyMasterGain();
       this.master.connect(this.ctx.destination);
     }
     if (this.ctx.state === "suspended") {
@@ -45,9 +115,8 @@ const Sound = {
   setPreset(id) {
     const useA = id === "A";
     this.preset = useA ? "A" : "real";
-    if (this.master) {
-      this.master.gain.value = useA ? 0.62 : 0.9;
-    }
+    this.presetGain = useA ? 0.62 : 0.9;
+    this._applyMasterGain();
     if (typeof els !== "undefined") {
       if (els.btnPresetA) els.btnPresetA.classList.toggle("active", useA);
       if (els.btnPresetE) els.btnPresetE.classList.toggle("active", !useA);
@@ -66,7 +135,7 @@ const Sound = {
     if (!template) return Promise.resolve();
 
     const audio = template.cloneNode();
-    audio.volume = Math.min(1, Math.max(0, volume));
+    audio.volume = Math.min(1, Math.max(0, volume * this.volume));
     return audio.play().catch(() => {});
   },
 
@@ -366,11 +435,42 @@ const Sound = {
   },
 
   toggle() {
-    this.enabled = !this.enabled;
-    if (typeof els !== "undefined" && els.btnSound) {
-      els.btnSound.textContent = this.enabled ? "🔊" : "🔇";
-      els.btnSound.classList.toggle("muted", !this.enabled);
-      els.btnSound.setAttribute("aria-pressed", String(this.enabled));
+    this.setVolume(this.volume > 0 ? 0 : DEFAULT_VOLUME);
+  },
+
+  playBgm() {
+    if (!this.bgmEl) return;
+    this.bgmEl.muted = this.volume <= 0.001;
+    this.bgmEl.volume = this.volume;
+    void this.bgmEl.play()
+      .then(() => {
+        this.bgmStarted = true;
+      })
+      .catch(() => {});
+  },
+
+  initBgm() {
+    this.bgmEl = document.getElementById("bgm");
+    if (!this.bgmEl) return;
+
+    const url = document.body?.dataset?.bgmUrl || "../home/bgm.mp3";
+    if (!this.bgmEl.getAttribute("src")) {
+      this.bgmEl.src = url;
     }
+
+    this.loadVolume();
+    this._applyMasterGain();
+    this.updateVolumeUI();
+
+    document.body.addEventListener(
+      "click",
+      () => {
+        this.init();
+        this.playBgm();
+      },
+      { once: true },
+    );
+
+    this.playBgm();
   },
 };

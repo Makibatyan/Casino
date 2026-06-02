@@ -163,6 +163,56 @@ body {
   font-size: 1rem;
 }
 
+.wallet-summary {
+  margin: 1rem 0;
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.wallet-summary div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(212, 168, 75, 0.15);
+}
+
+.wallet-summary dt {
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+}
+
+.wallet-summary dd {
+  margin: 0;
+  color: var(--text);
+}
+
+.wallet-summary strong {
+  color: var(--gold-light);
+  font-family: var(--font-display);
+}
+
+.wallet-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: -0.25rem 0 1rem;
+}
+
+.hud-sub {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+  line-height: 1.4;
+}
+
+.hud-sub strong {
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
 /* ボタン */
 .btn {
   font-family: var(--font-display);
@@ -220,6 +270,32 @@ body {
   color: var(--gold);
   border: 1px solid var(--gold-dark);
   flex: 1;
+}
+
+.btn-home-link {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.btn-home {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  background: rgba(26, 10, 12, 0.85);
+  color: var(--text-muted);
+  border: 1px solid var(--felt-edge);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.btn-home:hover {
+  color: var(--gold-light);
+  border-color: var(--gold-dark);
 }
 
 /* HUD */
@@ -694,27 +770,41 @@ body.fx-shake-bust {
   position: relative;
 }
 
-.btn-sound {
-  display: block;
-  margin-top: 0.25rem;
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
   margin-left: auto;
-  padding: 0.2rem 0.45rem;
-  font-size: 0.9rem;
-  background: transparent;
+  padding: 0.15rem 0.4rem;
   border: 1px solid var(--felt-edge);
   border-radius: 4px;
-  cursor: pointer;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.volume-icon {
+  font-size: 0.85rem;
   line-height: 1;
-  opacity: 0.85;
+  opacity: 0.9;
+  flex-shrink: 0;
 }
 
-.btn-sound:hover {
+.volume-slider {
+  width: 5.5rem;
+  height: 0.35rem;
+  margin: 0;
+  accent-color: var(--gold);
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.volume-slider:hover {
   opacity: 1;
-  border-color: var(--gold-dark);
 }
 
-.btn-sound.muted {
-  opacity: 0.45;
+.volume-slider:focus-visible {
+  outline: 1px solid var(--gold-dark);
+  outline-offset: 2px;
 }
 
 .sound-preset-row {

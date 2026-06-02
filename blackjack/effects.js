@@ -1,6 +1,6 @@
 /**
  * UI演出・カードアニメ・コイン飛翔・パチンコ風「台熱」心理演出
- * ※カードの出目は改ざんせず、演出とボーナスコインのみ
+ * ※カードの出目は改ざんせず、演出とボーナスペリカのみ
  */
 const FX = {
   layer: null,
@@ -192,8 +192,8 @@ const FX = {
 
   /* ---------- コイン飛翔（勝敗時 → HUD） ---------- */
   flyCoinsToHud(amount, isWin) {
-    if (!this.layer || !els?.bankroll) return;
-    const hr = els.bankroll.getBoundingClientRect();
+    if (!this.layer || !els?.cash) return;
+    const hr = els.cash.getBoundingClientRect();
     const count = Math.min(8, Math.max(3, Math.floor(amount / 500)));
     for (let i = 0; i < count; i++) {
       setTimeout(() => {
@@ -210,8 +210,8 @@ const FX = {
         setTimeout(() => c.remove(), 650);
       }, i * 70);
     }
-    els.bankroll.classList.add(isWin ? "pulse-win" : "pulse-lose");
-    setTimeout(() => els.bankroll.classList.remove("pulse-win", "pulse-lose"), 500);
+    els.cash.classList.add(isWin ? "pulse-win" : "pulse-lose");
+    setTimeout(() => els.cash.classList.remove("pulse-win", "pulse-lose"), 500);
   },
 
   /* ---------- カード演出 (#1) ---------- */
@@ -269,7 +269,16 @@ const FX = {
     await this.delay(280);
   },
 
-  /* ---------- ざわざわ・緊張演出 ---------- */
+  /* ---------- ざわざわ・カットイン・緊張演出 ---------- */
+  CUTIN_SRC: "assets/kaiji-cutin.png",
+
+  getCutinChance(bonus = 0) {
+    let c = 0.34 + bonus;
+    if (this.rushActive) c += 0.1;
+    if (typeof currentBet !== "undefined" && currentBet >= 2500) c += 0.06;
+    return Math.min(0.72, c);
+  },
+
   getZawazawaChance(bonus = 0) {
     let c = 0.2 + bonus;
     if (this.rushActive) c += 0.1;
@@ -283,6 +292,120 @@ const FX = {
       return true;
     }
     return false;
+  },
+
+  async maybeCutin(bonus = 0) {
+    if (Math.random() < this.getCutinChance(bonus)) {
+      await this.playCutin();
+      return true;
+    }
+    return false;
+  },
+
+  /** カットイン(34%) → ざわざわ(20%) の順で緊張演出 */
+  async maybeTensionMoment(bonus = 0) {
+    if (await this.maybeCutin(bonus)) return true;
+    return this.maybeZawazawa(bonus);
+  },
+
+  async playCutin() {
+    if (!this.layer) return;
+    this.tensionPulse();
+    els?.gameScreen?.classList.add("cutin-shake-active", "cutin-shake-heavy");
+    document.body.classList.add("cutin-active");
+
+    if (els?.fxOverlay) {
+      els.fxOverlay.classList.add("active", "cutin-overlay-flash");
+      els.fxOverlay.setAttribute("aria-hidden", "false");
+    }
+
+    const src = this.CUTIN_SRC;
+    const wrap = document.createElement("div");
+    wrap.className = "kaiji-cutin";
+    wrap.innerHTML = `
+      <div class="cutin-blackout" aria-hidden="true"></div>
+      <div class="cutin-flash cutin-flash-a" aria-hidden="true"></div>
+      <div class="cutin-flash cutin-flash-b" aria-hidden="true"></div>
+      <div class="cutin-flash cutin-flash-c" aria-hidden="true"></div>
+      <div class="cutin-invert-flash" aria-hidden="true"></div>
+      <div class="cutin-burst" aria-hidden="true"></div>
+      <div class="cutin-shockwave cutin-shockwave-1" aria-hidden="true"></div>
+      <div class="cutin-shockwave cutin-shockwave-2" aria-hidden="true"></div>
+      <div class="cutin-shockwave cutin-shockwave-3" aria-hidden="true"></div>
+      <div class="cutin-speedlines" aria-hidden="true"></div>
+      <div class="cutin-diagonal-stripes" aria-hidden="true"></div>
+      <div class="cutin-edge-glow cutin-edge-top" aria-hidden="true"></div>
+      <div class="cutin-edge-glow cutin-edge-bottom" aria-hidden="true"></div>
+      <div class="cutin-frame">
+        <span class="cutin-aura" aria-hidden="true"></span>
+        <span class="cutin-aura cutin-aura-2" aria-hidden="true"></span>
+        <span class="cutin-slash cutin-slash-1" aria-hidden="true"></span>
+        <span class="cutin-slash cutin-slash-2" aria-hidden="true"></span>
+        <span class="cutin-slash cutin-slash-3" aria-hidden="true"></span>
+        <img src="${src}" alt="" class="kaiji-cutin-img cutin-ghost-r" aria-hidden="true" />
+        <img src="${src}" alt="" class="kaiji-cutin-img cutin-ghost-b" aria-hidden="true" />
+        <img src="${src}" alt="" class="kaiji-cutin-img cutin-main" />
+        <span class="cutin-afterimage" aria-hidden="true"></span>
+      </div>
+      <p class="cutin-don-text">ドン！！</p>
+      <p class="cutin-impact-text">ッ！！</p>
+      <p class="cutin-sub-text">ざわ…ざわざわ……</p>
+      <div class="cutin-glitch" aria-hidden="true"></div>
+      <div class="cutin-scanlines" aria-hidden="true"></div>
+      <div class="cutin-vignette" aria-hidden="true"></div>
+    `;
+    this.layer.appendChild(wrap);
+    const frame = wrap.querySelector(".cutin-frame");
+    this.spawnCutinParticles(frame, 48);
+    this.spawnCutinSparks(frame, 16);
+
+    requestAnimationFrame(() => wrap.classList.add("cutin-live"));
+
+    setKaijiLine("tension");
+    Sound?.play("zawazawa");
+    setTimeout(() => Sound?.play("zawazawa"), 120);
+    setTimeout(() => Sound?.play("zawazawa"), 380);
+
+    await this.delay(1850);
+    wrap.classList.add("cutin-out");
+    await this.delay(600);
+    wrap.remove();
+    els?.gameScreen?.classList.remove("cutin-shake-active", "cutin-shake-heavy");
+    document.body.classList.remove("cutin-active");
+    if (els?.fxOverlay) {
+      els.fxOverlay.classList.remove("active", "cutin-overlay-flash");
+      els.fxOverlay.setAttribute("aria-hidden", "true");
+    }
+    this.tensionEnd();
+  },
+
+  spawnCutinParticles(parent, count = 48) {
+    if (!parent) return;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement("span");
+      p.className = "cutin-particle" + (i % 3 === 0 ? " cutin-particle-big" : "");
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+      const dist = 100 + Math.random() * 180;
+      p.style.setProperty("--px", `${Math.cos(angle) * dist}px`);
+      p.style.setProperty("--py", `${Math.sin(angle) * dist}px`);
+      p.style.animationDelay = `${Math.random() * 0.25}s`;
+      parent.appendChild(p);
+    }
+  },
+
+  spawnCutinSparks(parent, count = 16) {
+    if (!parent) return;
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement("span");
+      s.className = "cutin-spark";
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 160 + Math.random() * 220;
+      s.style.setProperty("--px", `${Math.cos(angle) * dist}px`);
+      s.style.setProperty("--py", `${Math.sin(angle) * dist}px`);
+      s.style.setProperty("--rot", `${Math.random() * 360}deg`);
+      s.style.animationDelay = `${0.05 + Math.random() * 0.3}s`;
+      parent.appendChild(s);
+    }
   },
 
   async playZawazawa() {
@@ -330,7 +453,7 @@ const FX = {
     els?.playerArea?.classList.add("danger-pulse");
     setKaijiLine("danger");
     setTimeout(() => els?.playerArea?.classList.remove("danger-pulse"), 1000);
-    void this.maybeZawazawa(0.15);
+    void this.maybeTensionMoment(0.15);
   },
 
   eventRiskyHand(val) {
@@ -343,14 +466,14 @@ const FX = {
     this.showFloatText(`スタンド ${pVal} — 勝負は相手次第`, "event-text standoff");
     setKaijiLine("standoff");
     await this.delay(400);
-    await this.maybeZawazawa(0.08);
+    await this.maybeTensionMoment(0.08);
   },
 
   async eventHoleReveal() {
     this.showFloatText("…裏の札、開示", "event-text suspense");
     this.tensionPulse();
     await this.delay(450);
-    if (!(await this.maybeZawazawa(0.12))) {
+    if (!(await this.maybeTensionMoment(0.12))) {
       Sound?.play("zawazawa");
       await this.delay(500);
     }
@@ -368,7 +491,7 @@ const FX = {
     Sound?.play("zawazawa");
     await this.delay(700);
     els?.gameTable?.classList.remove("showdown-shake");
-    if (diff <= 1) await this.maybeZawazawa(0.2);
+    if (diff <= 1) await this.maybeTensionMoment(0.2);
   },
 
   eventDoubleDown() {
@@ -376,7 +499,7 @@ const FX = {
     setKaijiLine("doubleDown");
     els?.gameScreen?.classList.add("event-double");
     setTimeout(() => els?.gameScreen?.classList.remove("event-double"), 900);
-    void this.maybeZawazawa(0.1);
+    void this.maybeTensionMoment(0.1);
   },
 
   eventLucky21() {
@@ -409,7 +532,7 @@ const FX = {
           ? "ブラックジャック！"
           : result === "dealerBust"
             ? "ディーラーバースト"
-            : `+${formatCoins(net)} コイン`;
+            : `+${formatCoins(net)} ペリカ`;
       await this.showOutcomeBanner("WIN", sub, "win");
     } else {
       this.showFloatText(`+${formatCoins(net)}`, "outcome-float win");
@@ -436,7 +559,7 @@ const FX = {
           ? "バースト"
           : isTwentyOne(dealerHand)
             ? "ディーラー21点"
-            : `-${formatCoins(loss)} コイン`;
+            : `-${formatCoins(loss)} ペリカ`;
       await this.showOutcomeBanner("LOSE", sub, "lose");
     } else {
       this.showFloatText(`-${formatCoins(loss)}`, "outcome-float lose");

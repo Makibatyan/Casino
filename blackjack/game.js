@@ -1,6 +1,6 @@
 /**
  * カイジのブラックジャック
- * 1人 vs ディーラー / コイン・ベット制
+ * 1人 vs ディーラー / ペリカ・ベット制
  */
 
 const SUITS = ["♠", "♥", "♦", "♣"];
@@ -18,7 +18,7 @@ const KAIJI_LINES = {
     "「全てを賭ける覚悟ができているか…？」",
     "「この一手で人生が変わる。怖くないか？」",
     "「さあ、賭けの時間だ…」",
-    "「コイン一枚一枚が、俺の命綱だ」",
+    "「ペリカ一枚一枚が、俺の命綱だ」",
   ],
   deal: [
     "「カードは神の領域…だが、読める」",
@@ -61,7 +61,7 @@ const KAIJI_LINES = {
     "「同点…まだ勝負は続く」",
   ],
   lowMoney: [
-    "「コインが残りわずか…背水の陣だ」",
+    "「ペリカが残りわずか…背水の陣だ」",
     "「これ以上負けたら終わりだ…慎重に」",
   ],
   bankrupt: [
@@ -126,12 +126,126 @@ const TENSION_HIT_DELAY = 1550;
 
 const START_QUOTES = KAIJI_LINES.start;
 
+// —— 共有 localStorage キー（スロット・ホームと共通） ——
+const KEY_CASH = "bugging_cash";
+const KEY_DEBT = "bugging_debt";
+const KEY_PAID = "bugging_paid";
+const KEY_BET = "bugging_slot_bet";
+const KEY_LAST_DIFF = "last_diff";
+
+const INIT_CASH = 5000;
+const INIT_DEBT = 500000;
+const INIT_PAID = 0;
+const INIT_BET = 100;
+
+const DEFAULT_CASH = INIT_CASH;
+const DEFAULT_DEBT = INIT_DEBT;
+const DEFAULT_PAID = INIT_PAID;
+const DEFAULT_BET = INIT_BET;
+
+/** ホーム画面（プロジェクト構成に合わせて data-home-url で上書き可） */
+const HOME_URL =
+  document.body?.dataset?.homeUrl || "../home/home.html";
+
+function loadNum(key, fallback) {
+  try {
+    const v = parseInt(localStorage.getItem(key), 10);
+    return Number.isFinite(v) && v >= 0 ? v : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveNum(key, value) {
+  try {
+    localStorage.setItem(key, String(Math.max(0, Math.floor(value))));
+  } catch {
+    /* プライベートモード等 */
+  }
+}
+
+/** 初回のみ共有データを初期化（スロット initSlot と同様） */
+function initSharedStorageIfNeeded() {
+  if (localStorage.getItem(KEY_DEBT) === null) {
+    localStorage.setItem(KEY_CASH, String(INIT_CASH));
+    localStorage.setItem(KEY_DEBT, String(INIT_DEBT));
+    localStorage.setItem(KEY_PAID, String(INIT_PAID));
+    localStorage.setItem(KEY_BET, String(INIT_BET));
+  }
+}
+
+function loadShared() {
+  initSharedStorageIfNeeded();
+  return {
+    cash: loadNum(KEY_CASH, INIT_CASH),
+    debt: loadNum(KEY_DEBT, INIT_DEBT),
+    paid: loadNum(KEY_PAID, INIT_PAID),
+  };
+}
+
+function saveShared() {
+  saveNum(KEY_CASH, cash);
+  saveNum(KEY_DEBT, debt);
+  saveNum(KEY_PAID, paid);
+  saveNum(KEY_BET, savedBet);
+}
+
+function loadWallet() {
+  const shared = loadShared();
+  cash = shared.cash;
+  debt = shared.debt;
+  paid = shared.paid;
+  savedBet = loadNum(KEY_BET, INIT_BET);
+  savedBet = Math.max(100, Math.min(cash || INIT_CASH, savedBet));
+}
+
+function saveWallet() {
+  saveShared();
+}
+
+/** ホームの増減演出用（スロット last_diff と合算） */
+function flushSessionToLastDiff() {
+  const sessionDiff = cash - sessionStartCash;
+  if (sessionDiff === 0) return;
+  try {
+    const currentDiff = parseInt(localStorage.getItem(KEY_LAST_DIFF), 10) || 0;
+    localStorage.setItem(KEY_LAST_DIFF, String(currentDiff + sessionDiff));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** ベット確定後〜ラウンド終了まで（この間ホームへ戻るとベットは戻らない） */
+function isRoundInProgress() {
+  return phase === "playing" || phase === "dealer";
+}
+
+function goHome(skipConfirm = false) {
+  if (!skipConfirm && isRoundInProgress() && currentBet > 0) {
+    const ok = window.confirm(
+      "戦闘中にホームへ戻ると、ベットしたペリカは戻りません。\nホームに戻りますか？"
+    );
+    if (!ok) return;
+  }
+
+  flushSessionToLastDiff();
+  saveShared();
+  window.location.href = HOME_URL;
+}
+
 // --- ゲーム状態 ---
 let deck = [];
 let playerHand = [];
 let dealerHand = [];
-let bankroll = 10000;
-let initialBankroll = 10000;
+/** 手持ちペリカ（bugging_cash） */
+let cash = DEFAULT_CASH;
+/** 借金残高（bugging_debt） */
+let debt = DEFAULT_DEBT;
+/** 返済累計（bugging_paid） */
+let paid = DEFAULT_PAID;
+/** 次回の既定ベット（bugging_slot_bet） */
+let savedBet = DEFAULT_BET;
+let sessionStartCash = DEFAULT_CASH;
 let sessionCoins = 0;
 let currentBet = 0;
 let pendingBet = 0;
@@ -150,7 +264,9 @@ const screens = {
 };
 
 const els = {
-  bankroll: document.getElementById("bankroll"),
+  cash: document.getElementById("cash"),
+  debt: document.getElementById("debt"),
+  paid: document.getElementById("paid"),
   sessionCoins: document.getElementById("session-coins"),
   winStreak: document.getElementById("win-streak"),
   kaijiDialogue: document.getElementById("kaiji-dialogue"),
@@ -169,9 +285,13 @@ const els = {
   btnPlaceBet: document.getElementById("btn-place-bet"),
   btnStart: document.getElementById("btn-start"),
   btnRestart: document.getElementById("btn-restart"),
-  initialBankroll: document.getElementById("initial-bankroll"),
+  btnHome: document.getElementById("btn-home"),
+  btnHomeStart: document.getElementById("btn-home-start"),
+  startCash: document.getElementById("start-cash"),
+  startDebt: document.getElementById("start-debt"),
+  startPaid: document.getElementById("start-paid"),
   startQuote: document.getElementById("start-quote"),
-  finalBankroll: document.getElementById("final-bankroll"),
+  finalCash: document.getElementById("final-cash"),
   finalSession: document.getElementById("final-session"),
   gameoverQuote: document.getElementById("gameover-quote"),
   maxBet: document.getElementById("max-bet"),
@@ -180,7 +300,8 @@ const els = {
   gameScreen: document.getElementById("game-screen"),
   playerArea: document.getElementById("player-area"),
   dealerArea: document.getElementById("dealer-area"),
-  btnSound: document.getElementById("btn-sound"),
+  volumeSlider: document.getElementById("volume-slider"),
+  volumeIcon: document.getElementById("volume-icon"),
   btnPresetA: document.getElementById("btn-preset-a"),
   btnPresetE: document.getElementById("btn-preset-e"),
   gameTable: document.getElementById("game-table"),
@@ -232,8 +353,23 @@ function setBetError(msg) {
   els.betError.textContent = msg || "";
 }
 
+function updateStartWalletUI() {
+  if (els.startCash) els.startCash.textContent = formatCoins(cash);
+  if (els.startDebt) els.startDebt.textContent = formatCoins(debt);
+  if (els.startPaid) els.startPaid.textContent = formatCoins(paid);
+}
+
+function applySavedBetToUI() {
+  if (savedBet <= 0 || savedBet > cash) return;
+  pendingBet = savedBet;
+  document.querySelectorAll(".chip").forEach((ch) => {
+    const chipAmt = ch.dataset.bet === "allin" ? cash : parseInt(ch.dataset.bet, 10);
+    ch.classList.toggle("selected", chipAmt === savedBet);
+  });
+}
+
 function updateBetUI() {
-  const max = bankroll;
+  const max = cash;
   els.maxBet.textContent = formatCoins(max);
   els.customBet.max = max;
   els.customBet.min = max > 0 ? 1 : 0;
@@ -424,14 +560,17 @@ function dealerShouldHit() {
 }
 
 function updateHUD() {
-  els.bankroll.textContent = formatCoins(bankroll);
+  els.cash.textContent = formatCoins(cash);
+  if (els.debt) els.debt.textContent = formatCoins(debt);
+  if (els.paid) els.paid.textContent = formatCoins(paid);
   els.sessionCoins.textContent = (sessionCoins >= 0 ? "+" : "") + formatCoins(sessionCoins);
   els.sessionCoins.classList.toggle("negative", sessionCoins < 0);
   els.winStreak.textContent = String(winStreak);
 
-  if (bankroll > 0 && bankroll <= initialBankroll * 0.2) {
+  if (cash > 0 && cash <= sessionStartCash * 0.2) {
     setKaijiLine("lowMoney");
   }
+  saveWallet();
 }
 
 // --- デッキ ---
@@ -548,8 +687,8 @@ function setControls({ hit, stand, double, newRound }) {
       ? "ダブル済み — 追加カードは1枚のみ"
       : double
         ? "ベットを2倍にして1枚だけ引く"
-        : bankroll < currentBet
-          ? "ダブルに必要なコインが足りません"
+        : cash < currentBet
+          ? "ダブルに必要なペリカが足りません"
           : "今はダブルできません"
   );
   apply(els.btnNewRound, newRound, newRound ? "次のラウンドへ" : "ラウンド終了後に押せます");
@@ -562,13 +701,13 @@ function showBetPanel(show) {
 // --- ベット ---
 function selectChip(amount) {
   setBetError("");
-  if (amount > bankroll) {
-    setBetError(`所持コイン（${formatCoins(bankroll)}）を超えるベットはできません`);
+  if (amount > cash) {
+    setBetError(`所持ペリカ（${formatCoins(cash)}）を超えるベットはできません`);
     return;
   }
   pendingBet = amount;
   document.querySelectorAll(".chip").forEach((ch) => {
-    const chipAmt = ch.dataset.bet === "allin" ? bankroll : parseInt(ch.dataset.bet, 10);
+    const chipAmt = ch.dataset.bet === "allin" ? cash : parseInt(ch.dataset.bet, 10);
     ch.classList.toggle("selected", chipAmt === amount);
   });
   els.customBet.value = "";
@@ -577,11 +716,11 @@ function selectChip(amount) {
 
 function selectAllIn() {
   setBetError("");
-  if (bankroll < 1) {
-    setBetError("ベットできるコインがありません");
+  if (cash < 1) {
+    setBetError("ベットできるペリカがありません");
     return;
   }
-  pendingBet = bankroll;
+  pendingBet = cash;
   document.querySelectorAll(".chip").forEach((ch) => {
     ch.classList.toggle("selected", ch.dataset.bet === "allin");
   });
@@ -600,21 +739,22 @@ function placeBet() {
     setBetError("ベット額を選んでください");
     return;
   }
-  if (bet > bankroll) {
-    setBetError(`所持コイン（${formatCoins(bankroll)}）を超えるベットはできません`);
+  if (bet > cash) {
+    setBetError(`所持ペリカ（${formatCoins(cash)}）を超えるベットはできません`);
     els.customBet.classList.add("input-error");
     return;
   }
-  if (bankroll < 1) {
-    setBetError("ベットできるコインがありません");
+  if (cash < 1) {
+    setBetError("ベットできるペリカがありません");
     return;
   }
 
   els.btnPlaceBet.disabled = true;
 
-  lastBetTier = getBetTier(bet, bankroll);
+  lastBetTier = getBetTier(bet, cash);
   currentBet = bet;
-  bankroll -= bet;
+  savedBet = bet;
+  cash -= bet;
   els.currentBet.textContent = formatCoins(currentBet);
   updateHUD();
   setKaijiLine("bet");
@@ -627,7 +767,7 @@ function placeBet() {
   }
 
   void startRound().finally(() => {
-    els.btnPlaceBet.disabled = bankroll <= 0;
+    els.btnPlaceBet.disabled = cash <= 0;
   });
 }
 
@@ -664,7 +804,7 @@ async function startRound() {
   setControls({
     hit: true,
     stand: true,
-    double: bankroll >= currentBet && playerHand.length === 2,
+    double: cash >= currentBet && playerHand.length === 2,
     newRound: false,
   });
 }
@@ -701,8 +841,8 @@ async function hit() {
 
 async function doubleDown() {
   if (phase !== "playing" || playerHand.length !== 2 || actionLock || doubled) return;
-  if (bankroll < currentBet) {
-    els.gameMessage.textContent = "ダブルに必要なコインが足りません";
+  if (cash < currentBet) {
+    els.gameMessage.textContent = "ダブルに必要なペリカが足りません";
     return;
   }
 
@@ -710,9 +850,9 @@ async function doubleDown() {
   doubled = true;
   setControls({ hit: false, stand: false, double: false, newRound: false });
 
-  bankroll -= currentBet;
+  cash -= currentBet;
   currentBet *= 2;
-  lastBetTier = getBetTier(currentBet, bankroll + currentBet);
+  lastBetTier = getBetTier(currentBet, cash + currentBet);
   els.currentBet.textContent = formatCoins(currentBet);
   updateHUD();
   setKaijiLine("hit");
@@ -814,7 +954,7 @@ async function waitDealerHitPause() {
   FX.tensionPulse();
   els.gameMessage.textContent = `ディーラー ${handValue(dealerHand)} → あなた ${handValue(playerHand)}…勝負のカード`;
   const betBonus = currentBet >= 2500 ? 0.12 : 0;
-  if (await FX.maybeZawazawa(betBonus)) return;
+  if (await FX.maybeTensionMoment(betBonus)) return;
   await delay(TENSION_HIT_DELAY);
 }
 
@@ -868,46 +1008,46 @@ async function endRound(result, payout) {
 
   switch (result) {
     case "blackjack":
-      bankroll += payout;
+      cash += payout;
       net = payout - currentBet;
       sessionCoins += net;
       winStreak++;
-      message = `ブラックジャック！ +${formatCoins(net)} コイン`;
+      message = `ブラックジャック！ +${formatCoins(net)} ペリカ`;
       kaijiCategory = "blackjack";
       if (net >= currentBet * 1.5) setKaijiLine("bigWin");
       break;
     case "win":
-      bankroll += payout;
+      cash += payout;
       net = currentBet;
       sessionCoins += net;
       winStreak++;
       message = isTwentyOne(playerHand)
-        ? `21点達成！ +${formatCoins(net)} コイン`
-        : `勝利！ +${formatCoins(net)} コイン`;
+        ? `21点達成！ +${formatCoins(net)} ペリカ`
+        : `勝利！ +${formatCoins(net)} ペリカ`;
       kaijiCategory = isTwentyOne(playerHand) ? "blackjack" : "win";
       if (net >= 5000) setKaijiLine("bigWin");
       break;
     case "dealerBust":
-      bankroll += payout;
+      cash += payout;
       net = currentBet;
       sessionCoins += net;
       winStreak++;
       message = isTwentyOne(playerHand)
-        ? `21点 & ディーラーバースト！ +${formatCoins(net)} コイン`
-        : `ディーラーバースト！ +${formatCoins(net)} コイン`;
+        ? `21点 & ディーラーバースト！ +${formatCoins(net)} ペリカ`
+        : `ディーラーバースト！ +${formatCoins(net)} ペリカ`;
       kaijiCategory = isTwentyOne(playerHand) ? "blackjack" : "dealerBust";
       break;
     case "push":
-      bankroll += payout;
+      cash += payout;
       net = 0;
-      message = `引き分け — ベット ${formatCoins(currentBet)} を返還`;
+      message = `引き分け — ベット ${formatCoins(currentBet)} ペリカを返還`;
       kaijiCategory = "push";
       winStreak = 0;
       break;
     case "bust":
       net = -currentBet;
       sessionCoins += net;
-      message = `バースト… -${formatCoins(currentBet)} コイン`;
+      message = `バースト… -${formatCoins(currentBet)} ペリカ`;
       kaijiCategory = "bust";
       winStreak = 0;
       break;
@@ -916,8 +1056,8 @@ async function endRound(result, payout) {
       net = -currentBet;
       sessionCoins += net;
       message = isTwentyOne(dealerHand)
-        ? `ディーラー21点… -${formatCoins(currentBet)} コイン`
-        : `敗北… -${formatCoins(currentBet)} コイン`;
+        ? `ディーラー21点… -${formatCoins(currentBet)} ペリカ`
+        : `敗北… -${formatCoins(currentBet)} ペリカ`;
       kaijiCategory = "lose";
       winStreak = 0;
       break;
@@ -938,10 +1078,10 @@ async function endRound(result, payout) {
     currentBet,
   });
   if (bonus > 0) {
-    bankroll += bonus;
+    cash += bonus;
     sessionCoins += bonus;
     net += bonus;
-    message += ` （熱ボーナス +${formatCoins(bonus)}）`;
+    message += ` （熱ボーナス +${formatCoins(bonus)} ペリカ）`;
   }
 
   els.gameMessage.textContent = message;
@@ -958,18 +1098,17 @@ async function endRound(result, payout) {
 }
 
 function checkBankrupt() {
-  if (bankroll <= 0) {
-    setTimeout(() => {
-      els.finalBankroll.textContent = formatCoins(bankroll);
-      els.finalSession.textContent = (sessionCoins >= 0 ? "+" : "") + formatCoins(sessionCoins);
-      els.gameoverQuote.textContent = pickRandom(KAIJI_LINES.bankrupt);
-      showScreen("gameover");
-    }, 2000);
+  if (cash <= 0) {
+    saveShared();
+    flushSessionToLastDiff();
+    els.gameMessage.textContent = "破産…ホームへ戻ります";
+    setKaijiLine("bankrupt");
+    setTimeout(() => goHome(true), 1800);
   }
 }
 
 function newRound() {
-  if (bankroll <= 0) {
+  if (cash <= 0) {
     checkBankrupt();
     return;
   }
@@ -998,14 +1137,14 @@ function newRound() {
 
   showBetPanel(true);
   updateBetUI();
+  applySavedBetToUI();
   setControls({ hit: false, stand: false, double: false, newRound: false });
   setKaijiLine("bet");
 }
 
 function startGame() {
-  const startAmount = parseInt(els.initialBankroll.value, 10) || 10000;
-  initialBankroll = Math.max(100, Math.min(999999, startAmount));
-  bankroll = initialBankroll;
+  loadWallet();
+  sessionStartCash = cash;
   sessionCoins = 0;
   winStreak = 0;
   currentBet = 0;
@@ -1021,23 +1160,38 @@ function startGame() {
 }
 
 function restartGame() {
-  showScreen("start");
-  els.startQuote.textContent = pickRandom(START_QUOTES);
+  goHome(true);
 }
 
 // --- イベント ---
-if (els.btnSound) {
-  els.btnSound.addEventListener("click", () => {
+if (els.volumeSlider) {
+  els.volumeSlider.addEventListener("input", () => {
     Sound.init();
-    Sound.toggle();
+    Sound.setVolume(parseInt(els.volumeSlider.value, 10) / 100);
   });
 }
+
+Sound.loadVolume();
+Sound.updateVolumeUI();
+Sound.initBgm();
 
 els.btnStart.addEventListener("click", () => {
   Sound.init();
   startGame();
 });
 els.btnRestart.addEventListener("click", restartGame);
+if (els.btnHome) {
+  els.btnHome.addEventListener("click", () => goHome(false));
+}
+if (els.btnHomeStart) {
+  els.btnHomeStart.addEventListener("click", () => {
+    loadWallet();
+    sessionStartCash = cash;
+    flushSessionToLastDiff();
+    saveShared();
+    window.location.href = HOME_URL;
+  });
+}
 els.btnPlaceBet.addEventListener("click", placeBet);
 els.btnHit.addEventListener("click", hit);
 els.btnStand.addEventListener("click", stand);
@@ -1074,9 +1228,9 @@ Sound.setPreset("E");
 els.customBet.addEventListener("input", () => {
   setBetError("");
   const val = parseInt(els.customBet.value, 10);
-  if (!Number.isNaN(val) && val > bankroll) {
+  if (!Number.isNaN(val) && val > cash) {
     els.customBet.classList.add("input-error");
-    setBetError(`最大 ${formatCoins(bankroll)} コインまで`);
+    setBetError(`最大 ${formatCoins(cash)} ペリカまで`);
   } else {
     els.customBet.classList.remove("input-error");
     pendingBet = 0;
@@ -1085,6 +1239,9 @@ els.customBet.addEventListener("input", () => {
 });
 
 FX.init();
+loadWallet();
+sessionStartCash = cash;
+updateStartWalletUI();
 
 // スタート画面のセリフローテーション
 els.startQuote.textContent = pickRandom(START_QUOTES);
