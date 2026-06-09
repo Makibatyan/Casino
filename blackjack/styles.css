@@ -770,6 +770,16 @@ body.fx-shake-bust {
   position: relative;
 }
 
+.bgm-player-host {
+  position: fixed;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .volume-control {
   display: flex;
   align-items: center;

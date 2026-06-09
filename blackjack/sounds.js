@@ -5,6 +5,8 @@ const SOUND_FILES = {
   coinLow: "sounds/coin-low.mp3",
   coinHigh: "sounds/coin-high.mp3",
   cardFlip: "sounds/card-flip.mp3",
+  zawazawaClip: "sounds/zawazawa.mp4",
+  cutinWhoosh: "sounds/cutin-whoosh.mp3",
   voiceBlackjack: "sounds/voice-blackjack.mp3",
   voiceBust: "sounds/voice-bust.mp3",
   voiceWin: "sounds/voice-win.mp3",
@@ -14,6 +16,8 @@ const SOUND_FILES = {
 
 const KEY_VOLUME = "bugging_volume";
 const DEFAULT_VOLUME = 0.8;
+const DEFAULT_BGM_VIDEO_ID = "0is4q9mlFHU";
+const VOICE_VOLUME = 1.0;
 
 const Sound = {
   ctx: null,
@@ -22,11 +26,41 @@ const Sound = {
   presetGain: 0.9,
   preset: "real",
   clips: {},
-  bgmEl: null,
+  _baseUrl: null,
+  _preloaded: false,
+  bgmPlayer: null,
   bgmStarted: false,
+  bgmVideoId: DEFAULT_BGM_VIDEO_ID,
 
   get enabled() {
     return this.volume > 0.001;
+  },
+
+  /** GitHub Pages 等でも正しく解決するベースURL */
+  assetUrl(relativePath) {
+    if (!this._baseUrl) {
+      const script = [...document.scripts].find((s) =>
+        (s.src || "").includes("sounds.js"),
+      );
+      if (script?.src) {
+        this._baseUrl = script.src.replace(/[^/]+$/, "");
+      } else {
+        const path = window.location.pathname;
+        const slash = path.lastIndexOf("/");
+        this._baseUrl =
+          slash >= 0
+            ? path.slice(0, slash + 1)
+            : "/";
+        if (!this._baseUrl.startsWith("http")) {
+          this._baseUrl = window.location.origin + this._baseUrl;
+        }
+      }
+    }
+    try {
+      return new URL(relativePath, this._baseUrl).href;
+    } catch {
+      return relativePath;
+    }
   },
 
   loadVolume() {
@@ -54,9 +88,22 @@ const Sound = {
     if (this.master) {
       this.master.gain.value = this.volume * this.presetGain;
     }
-    if (this.bgmEl) {
-      this.bgmEl.volume = this.volume;
-      this.bgmEl.muted = this.volume <= 0.001;
+    this._applyBgmVolume();
+  },
+
+  _applyBgmVolume() {
+    const player = this.bgmPlayer;
+    if (!player || typeof player.setVolume !== "function") return;
+    try {
+      const vol = Math.round(this.volume * 100);
+      if (this.volume <= 0.001) {
+        player.mute();
+      } else {
+        player.unMute();
+        player.setVolume(vol);
+      }
+    } catch {
+      /* プレイヤー未準備 */
     }
   },
 
@@ -89,6 +136,19 @@ const Sound = {
     }
   },
 
+  /** ユーザー操作後に Web Audio を確実に起動 */
+  unlockAudio() {
+    this.init();
+    if (this.ctx?.state === "suspended") {
+      void this.ctx.resume();
+    }
+  },
+
+  unlockAndPlayBgm() {
+    this.unlockAudio();
+    this.playBgm();
+  },
+
   init() {
     if (!this.ctx) {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -106,7 +166,7 @@ const Sound = {
     if (this._preloaded) return;
     this._preloaded = true;
     Object.entries(SOUND_FILES).forEach(([key, src]) => {
-      const audio = new Audio(src);
+      const audio = new Audio(this.assetUrl(src));
       audio.preload = "auto";
       this.clips[key] = audio;
     });
@@ -127,69 +187,29 @@ const Sound = {
     return this.ctx.currentTime;
   },
 
-  /** MP3を再生（都度クローンして重ね再生可能に） */
+  /** MP3/MP4を再生（HTML5 Audio・GitHub Pagesでも安定） */
   playFile(key, volume = 1) {
     if (!this.enabled) return Promise.resolve();
-    this.init();
-    const template = this.clips[key];
-    if (!template) return Promise.resolve();
+    this.unlockAudio();
 
-    const audio = template.cloneNode();
+    const rel = SOUND_FILES[key];
+    if (!rel) return Promise.resolve();
+
+    const template = this.clips[key];
+    const src = template?.src || this.assetUrl(rel);
+    const audio = new Audio(src);
     audio.volume = Math.min(1, Math.max(0, volume * this.volume));
-    return audio.play().catch(() => {});
-  },
 
-  /** リバーブ用インパルス（ホール響き） */
-  _createReverbImpulse(duration = 1.6, decay = 2.4) {
-    const rate = this.ctx.sampleRate;
-    const length = Math.floor(rate * duration);
-    const impulse = this.ctx.createBuffer(2, length, rate);
-    for (let c = 0; c < 2; c++) {
-      const ch = impulse.getChannelData(c);
-      for (let i = 0; i < length; i++) {
-        ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+    return audio.play().catch(() => {
+      if (key === "zawazawaClip") {
+        this._playZawazawaSynth();
       }
-    }
-    return impulse;
+    });
   },
 
-  /** ボイス再生（軽いホールリバーブ付き） */
-  playVoiceReverb(key, volume = 0.92, delayMs = 0) {
-    if (!this.enabled) return;
-    this.init();
-    const template = this.clips[key];
-    if (!template || !this.ctx) return;
-
-    if (!this._reverbImpulse) {
-      this._reverbImpulse = this._createReverbImpulse();
-    }
-
-    const run = () => {
-      const audio = template.cloneNode();
-      const source = this.ctx.createMediaElementSource(audio);
-
-      const dry = this.ctx.createGain();
-      dry.gain.value = 0.68;
-
-      const convolver = this.ctx.createConvolver();
-      convolver.buffer = this._reverbImpulse;
-
-      const wet = this.ctx.createGain();
-      wet.gain.value = 0.42;
-
-      const out = this.ctx.createGain();
-      out.gain.value = Math.min(1, Math.max(0, volume));
-
-      source.connect(dry);
-      source.connect(convolver);
-      convolver.connect(wet);
-      dry.connect(out);
-      wet.connect(out);
-      out.connect(this.master);
-
-      void audio.play().catch(() => {});
-    };
-
+  /** ボイス再生（コイン音と同じ経路で確実に鳴らす） */
+  playVoice(key, volume = VOICE_VOLUME, delayMs = 0) {
+    const run = () => void this.playFile(key, volume);
     if (delayMs > 0) setTimeout(run, delayMs);
     else run();
   },
@@ -218,6 +238,7 @@ const Sound = {
 
   noiseBurst(duration, when, opts = {}) {
     if (!this.enabled || !this.ctx) return;
+    this.unlockAudio();
     const {
       volume = 0.08,
       filterType = "bandpass",
@@ -255,6 +276,7 @@ const Sound = {
 
   feltTap(when, volume = 0.12) {
     if (!this.enabled || !this.ctx) return;
+    this.unlockAudio();
     const t0 = this.now() + when;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -322,7 +344,7 @@ const Sound = {
 
   playBlackjack() {
     this.cardFlipSynth(0, 0.85);
-    setTimeout(() => this.playVoiceReverb("voiceBlackjack", 0.95), 280);
+    this.playVoice("voiceBlackjack", VOICE_VOLUME, 280);
   },
 
   playBust() {
@@ -334,27 +356,28 @@ const Sound = {
       Q: 0.8,
     });
     this.feltTap(0.06, 0.14);
-    setTimeout(() => this.playVoiceReverb("voiceBust", 0.95), 200);
+    this.playVoice("voiceBust", VOICE_VOLUME, 200);
   },
 
   playOutcomeWin(tier) {
     this.playWin(tier);
-    setTimeout(() => this.playVoiceReverb("voiceWin", 0.94), 120);
+    this.playVoice("voiceWin", VOICE_VOLUME, 120);
   },
 
   playOutcomeLose() {
     this.cardPlace(0);
     void this.playFile("coinLow", 0.32);
-    setTimeout(() => this.playVoiceReverb("voiceLose", 0.94), 160);
+    this.playVoice("voiceLose", VOICE_VOLUME, 160);
   },
 
   playOutcomeEven() {
     this.cardPlace(0);
-    setTimeout(() => this.playVoiceReverb("voiceEven", 0.9), 100);
+    this.playVoice("voiceEven", VOICE_VOLUME, 100);
   },
 
-  playZawazawa() {
+  _playZawazawaSynth() {
     if (!this.enabled || !this.ctx) return;
+    this.unlockAudio();
     const t0 = this.now();
     const dur = 1.4;
     const bufferSize = Math.floor(this.ctx.sampleRate * dur);
@@ -383,9 +406,17 @@ const Sound = {
     src.stop(t0 + dur);
   },
 
+  playZawazawa() {
+    void this.playFile("zawazawaClip", 0.92);
+  },
+
+  playCutinZawazawa() {
+    void this.playFile("zawazawaClip", 0.96);
+  },
+
   play(name, opts = {}) {
     if (!this.enabled) return;
-    this.init();
+    this.unlockAudio();
     const tier = opts.tier || (typeof lastBetTier !== "undefined" ? lastBetTier : "mid");
 
     switch (name) {
@@ -397,6 +428,12 @@ const Sound = {
         break;
       case "zawazawa":
         this.playZawazawa();
+        break;
+      case "cutinZawazawa":
+        this.playCutinZawazawa();
+        break;
+      case "cutinWhoosh":
+        void this.playFile("cutinWhoosh", opts.volume ?? 0.9);
         break;
       case "deal":
         this.cardDeal(opts.when || 0);
@@ -421,13 +458,13 @@ const Sound = {
         this.playOutcomeLose();
         break;
       case "voiceWin":
-        this.playVoiceReverb("voiceWin", opts.volume ?? 0.94, opts.delayMs ?? 0);
+        this.playVoice("voiceWin", opts.volume ?? VOICE_VOLUME, opts.delayMs ?? 0);
         break;
       case "voiceLose":
-        this.playVoiceReverb("voiceLose", opts.volume ?? 0.94, opts.delayMs ?? 0);
+        this.playVoice("voiceLose", opts.volume ?? VOICE_VOLUME, opts.delayMs ?? 0);
         break;
       case "voiceEven":
-        this.playVoiceReverb("voiceEven", opts.volume ?? 0.9, opts.delayMs ?? 0);
+        this.playVoice("voiceEven", opts.volume ?? VOICE_VOLUME, opts.delayMs ?? 0);
         break;
       default:
         break;
@@ -439,38 +476,90 @@ const Sound = {
   },
 
   playBgm() {
-    if (!this.bgmEl) return;
-    this.bgmEl.muted = this.volume <= 0.001;
-    this.bgmEl.volume = this.volume;
-    void this.bgmEl.play()
-      .then(() => {
-        this.bgmStarted = true;
-      })
-      .catch(() => {});
+    const player = this.bgmPlayer;
+    if (!player || typeof player.playVideo !== "function") return;
+    try {
+      this._applyBgmVolume();
+      player.playVideo();
+      this.bgmStarted = true;
+    } catch {
+      /* 自動再生ブロック等 */
+    }
+  },
+
+  _createYoutubeBgm() {
+    if (this.bgmPlayer) return;
+
+    let host = document.getElementById("bgm-player");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "bgm-player";
+      host.className = "bgm-player-host";
+      host.setAttribute("aria-hidden", "true");
+      document.body.appendChild(host);
+    }
+
+    const videoId =
+      document.body?.dataset?.bgmVideoId || DEFAULT_BGM_VIDEO_ID;
+
+    this.bgmPlayer = new YT.Player("bgm-player", {
+      height: "0",
+      width: "0",
+      videoId,
+      playerVars: {
+        autoplay: 0,
+        playsinline: 1,
+        loop: 1,
+        playlist: videoId,
+        controls: 0,
+        disablekb: 1,
+        fs: 0,
+        modestbranding: 1,
+        rel: 0,
+      },
+      events: {
+        onReady: () => {
+          this._applyBgmVolume();
+        },
+      },
+    });
+  },
+
+  _loadYoutubeAPI() {
+    if (window.YT && window.YT.Player) {
+      this._createYoutubeBgm();
+      return;
+    }
+
+    const prevReady = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof prevReady === "function") prevReady();
+      this._createYoutubeBgm();
+    };
+
+    if (document.getElementById("youtube-iframe-api")) return;
+
+    const tag = document.createElement("script");
+    tag.id = "youtube-iframe-api";
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScript = document.getElementsByTagName("script")[0];
+    firstScript.parentNode.insertBefore(tag, firstScript);
   },
 
   initBgm() {
-    this.bgmEl = document.getElementById("bgm");
-    if (!this.bgmEl) return;
-
-    const url = document.body?.dataset?.bgmUrl || "../home/bgm.mp3";
-    if (!this.bgmEl.getAttribute("src")) {
-      this.bgmEl.src = url;
-    }
+    this.bgmVideoId =
+      document.body?.dataset?.bgmVideoId || DEFAULT_BGM_VIDEO_ID;
 
     this.loadVolume();
     this._applyMasterGain();
     this.updateVolumeUI();
+    this._loadYoutubeAPI();
 
-    document.body.addEventListener(
-      "click",
-      () => {
-        this.init();
-        this.playBgm();
-      },
-      { once: true },
-    );
+    const unlock = () => {
+      this.unlockAndPlayBgm();
+    };
 
-    this.playBgm();
+    document.body.addEventListener("click", unlock, { once: true });
+    document.body.addEventListener("touchstart", unlock, { once: true, passive: true });
   },
 };
