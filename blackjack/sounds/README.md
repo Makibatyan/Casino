@@ -15,8 +15,6 @@
 | `voice-win.mp3` | 「Win」ボイス（勝利演出） |
 | `voice-lose.mp3` | 「Lose」ボイス（敗北演出） |
 | `voice-even.mp3` | 「Even」ボイス（引き分け演出） |
-| `zawazawa.mp4` | ざわざわ効果音（カットイン含む） |
-| `cutin-whoosh.mp3` | カットイン演出の whoosh 音 |
 
 ## GitHub に公開する場合
 

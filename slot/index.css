@@ -1,0 +1,551 @@
+
+:root {
+  --wine-dark: #1a0a0c;
+  --wine: #5c1520;
+  --wine-mid: #7a1f2e;
+  --wine-light: #9b2d3f;
+  --wine-glow: #c43d52;
+  --gold: #d4a84b;
+  --gold-light: #f0d078;
+  --gold-dark: #8b6914;
+  --felt: #2d1218;
+  --felt-edge: #4a1a24;
+  --text: #f5e6e8;
+  --text-muted: #c9a8ad;
+  --shadow: rgba(0, 0, 0, 0.55);
+  --font-serif: "Noto Serif JP", serif;
+  --font-display: "Oswald", sans-serif;
+}
+
+/* ─── 全体ベース ─────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-serif);
+  color: var(--text);
+  background: linear-gradient(160deg, var(--wine-dark) 0%, #2a0f14 40%, var(--wine-dark) 100%);
+  overflow-x: hidden;
+  padding: 0.75rem 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ─── タイトル・ストーリー ───────────────────────── */
+.title-block {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.title-block h1 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--gold-light);
+  text-shadow: 0 2px 8px var(--shadow);
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  margin-top: 0.2rem;
+}
+
+/* ⚠️ 借金残高バナー（BJのカイジパネル風） */
+.story-banner {
+  width: 100%;
+  max-width: 900px;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(90deg, rgba(92, 21, 32, 0.9), rgba(45, 18, 24, 0.95));
+  border-left: 4px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  box-shadow: 0 4px 16px var(--shadow);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0.5rem 0;
+}
+
+.story-banner strong {
+  color: #ff6b7a; /* 借金は危険な赤 */
+}
+
+/* ─── HUD（ステータス表示） ─────────────────────── */
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 900px;
+  margin-bottom: 0.5rem;
+}
+
+.stat-card {
+  background: rgba(26, 10, 12, 0.7);
+  border: 1px solid var(--felt-edge);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--font-display);
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--gold-light);
+}
+
+/* ─── スロットマシン本体（BJテーブル風） ─────────────── */
+.machine {
+  width: 100%;
+  max-width: 900px;
+  background: radial-gradient(ellipse at center, var(--felt) 0%, #1f0c10 100%);
+  border: 3px solid var(--felt-edge);
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.4), 0 8px 32px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.machine-header {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.machine-header span { margin: 0 auto; color: var(--gold-light); }
+
+/* ─── リールエリア ───────────────────────────────── */
+.reels-outer {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  background: var(--wine-dark);
+  border: 2px solid var(--gold-dark);
+  border-radius: 12px;
+  padding: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+}
+
+.reels-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  height: 110px; /* 1コマ分だけ見せる */
+  overflow: hidden;
+}
+
+.reel-col {
+  background: var(--card-white);
+  border-radius: 8px;
+  overflow: hidden;
+  height: 100%;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+}
+
+.reel-strip {
+  display: flex;
+  flex-direction: column;
+}
+
+.reel-item {
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  user-select: none;
+}
+
+/* ─── 当たり判定ライン & WINオーバーレイ ───────────── */
+.win-line {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  right: 10px;
+  height: 4px;
+  background: var(--gold-light);
+  transform: translateY(-50%) scaleX(0);
+  opacity: 0;
+  transition: transform 0.3s, opacity 0.3s;
+  z-index: 5;
+  box-shadow: 0 0 12px var(--gold);
+}
+.win-line.active { transform: translateY(-50%) scaleX(1); opacity: 1; }
+
+.win-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.win-text {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--gold-light);
+  text-shadow: 0 0 20px rgba(212, 168, 75, 0.8);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.win-text.show { opacity: 1; transform: scale(1); }
+
+/* ─── BETコントロール（BJチップ・パネル風） ────────── */
+.bet-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 900px;
+  background: rgba(26, 10, 12, 0.5);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--felt-edge);
+  margin-bottom: 0.5rem;
+}
+
+.bet-label {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-right: 0.5rem;
+}
+
+.bet-display {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--gold-light);
+  font-weight: bold;
+  min-width: 120px;
+  text-align: center;
+}
+
+/* ─── ボタン各種（BJ流用） ────────────────────────── */
+.btn-small {
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold-dark);
+  font-family: var(--font-display);
+  font-size: 0.9rem;       /* 💡 少し大きく */
+  padding: 0.5rem 1rem;    /* 💡 横幅を広く */
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-small:hover { background: rgba(212,168,75,0.1); transform: translateY(-1px); }
+
+.btn-max {
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  color: var(--wine-dark);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.8rem;
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-max:hover { box-shadow: 0 0 12px rgba(212, 168, 75, 0.5); transform: translateY(-1px); }
+
+/* ストップボタン行 */
+.stop-row {
+  display: flex;
+  gap: 0.75rem;            /* 💡 隙間を広げて押しやすく */
+  width: 100%;
+  max-width: 900px;
+  margin-bottom: 0.75rem;
+}
+
+.btn-stop-ind {
+  flex: 1;
+  background: linear-gradient(180deg, var(--wine-light), var(--wine));
+  color: var(--text);
+  border: 2px solid var(--gold-dark);
+  font-family: var(--font-display);
+  font-size: 1.3rem;       /* 💡 文字サイズを1.3倍に拡大 */
+  padding: 1.25rem 0;      /* 💡 縦幅を2倍以上に拡大（圧倒的押しごたえ） */
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: bold;
+}
+.btn-stop-ind:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--wine-glow), var(--wine-light));
+  box-shadow: 0 0 16px rgba(196, 61, 82, 0.6);
+}
+.btn-stop-ind:disabled { opacity: 0.2; cursor: not-allowed; }
+
+/* メイン操作（START / HOME） */
+.main-btn-row {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 900px;
+  margin-bottom: 1rem;
+}
+
+.btn-main {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.4rem;       /* 💡 STARTの文字をドカンと大きく */
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  padding: 1.2rem;         /* 💡 縦幅をガッツリ拡大 */
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-start {
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  color: var(--wine-dark);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+.btn-st.btn-start:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(212, 168, 75, 0.5); transform: translateY(-2px); }
+.btn-start:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-home {
+  background: transparent;
+  color: var(--text-muted);
+  border: 2px solid var(--felt-edge); /* 💡 枠線を太く */
+  font-size: 1.1rem;       /* 💡 HOMEに戻るボタンも適度に大きく */
+}
+.btn-home:hover { background: rgba(255,255,255,0.05); }
+
+/* ─── 配当表 ─────────────────────────────────────── */
+.payout-table {
+  width: 100%;
+  max-width: 900px;
+  background: rgba(26, 10, 12, 0.7);
+  border: 1px solid var(--felt-edge);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.payout-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--gold-light);
+  margin-bottom: 0.4rem;
+  text-align: center;
+}
+
+.payout-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+}
+
+.payout-row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed rgba(255,255,255,0.05);
+  padding-bottom: 0.2rem;
+}
+.payout-sym { color: var(--text); }
+.payout-mult { color: var(--text-muted); }
+
+/* ─── ログエリア（BJメッセージ風） ──────────────────── */
+.log-area {
+  width: 100%;
+  max-width: 900px;
+  height: 100px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  padding: 0.5rem;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.log-line { animation: fadeIn 0.3s ease; }
+.log-line.jackpot { color: #facc15; font-weight: bold; }
+.log-line.win { color: #7dffb8; }
+.log-line.lose { color: #ff6b7a; }
+.log-line.info { color: var(--text-muted); }
+
+/* ─── 地下強制労働（ゲームオーバー） ────────────────── */
+.end-screen {
+  background: linear-gradient(145deg, var(--wine-mid), var(--wine-dark));
+  border: 2px solid var(--gold-dark);
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px var(--shadow);
+  margin-top: 2rem;
+}
+
+.end-icon { font-size: 3rem; margin-bottom: 1rem; }
+.end-title { font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem; }
+.end-title.lose-title { color: #ff6b7a; }
+.end-sub { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.6; }
+
+.btn-restart {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  color: var(--wine-dark);
+  font-family: var(--font-display);
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.btn-gohome {
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--gold-dark);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ─── レスポンシブ対応 ─────────────────────────────── */
+@media (max-width: 600px) {
+  .reel-item { font-size: 2rem; }
+  .stat-value { font-size: 1.1rem; }
+  .btn-main { font-size: 0.85rem; padding: 0.6rem; }
+  .btn-stop-ind { font-size: 0.8rem; padding: 0.5rem; }
+}
+
+/* ─── 元のCSSの後ろに以下を追加してください ────────────────── */
+
+/* カイジセリフパネル（BJ風） */
+.kaiji-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto 0.75rem auto;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(90deg, rgba(92, 21, 32, 0.9), rgba(45, 18, 24, 0.95));
+  border-left: 4px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  box-shadow: 0 4px 16px var(--shadow);
+}
+
+.kaiji-avatar {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--wine-dark);
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--gold-light);
+}
+
+.kaiji-dialogue {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+/* 💡 ざわざわ演出用スタイル */
+.zawa-text {
+  position: fixed;
+  font-family: inherit;
+  font-weight: 700;
+  color: rgba(196, 61, 82, 0.7); /* 不気味な赤透明 */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 999;
+  animation: zawaMove 1.5s ease-out forwards;
+}
+
+@keyframes zawaMove {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translate(0, 10px);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.1) translate(-5px, -5px);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1) translate(-10px, -15px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translate(-15px, -30px);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── 追記：光るボタン演出 ────────────────────────── */
+
+/* リール回転中、有効化されたストップボタンを明滅させる */
+.btn-stop-ind:not(:disabled) {
+  animation: pulse-glow 1.2s infinite alternate;
+  border-color: var(--gold-light);
+}
+
+@keyframes pulse-glow {
+  0% {
+    background: linear-gradient(180deg, var(--wine-glow), var(--wine-light));
+    box-shadow: 0 0 8px rgba(196, 61, 82, 0.5), inset 0 0 4px rgba(255, 215, 0, 0.2);
+  }
+  100% {
+    background: linear-gradient(180deg, var(--wine-light), var(--wine));
+    box-shadow: 0 0 18px rgba(196, 61, 82, 0.9), 0 0 8px rgba(214, 168, 75, 0.4);
+    color: var(--gold-light);
+  }
+}
+
+/* ボタンを押した瞬間のカチッとした沈み込みエフェクト */
+.btn-stop-ind:active:not(:disabled),
+.btn-start:active:not(:disabled) {
+  transform: scale(0.96);
+  filter: brightness(1.2);
+}
