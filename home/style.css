@@ -1,129 +1,164 @@
-/* 背景 */
-body {
-    background-image: url("画像_half_trans.png");
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-attachment: fixed;
-    margin: 0;
-    padding: 0;
+/* ─── 闇のカラーパレット ─── */
+:root {
+    --bg-dark: #070203;
+    --gold: #d4a84b;
+    --text: #e6dadb;
 }
-
-/* フォント */
-
 
 @font-face {
     font-family: "Oiwai";
     src: url("玉ねぎ楷書激無料版v7改.ttf") format("truetype");
 }
 
-/* 所持金表示 */
-.money-box {
-    position: fixed;
-    width: 320px;
-    top: 41px;
-    right: 30px;
-    padding: 15px;
-    border-radius: 20px;
-    background: rgba(0,0,0,0.7);
-    border: 3px solid gold;
-    text-align: center;
-    box-shadow: 0 0 20px rgba(255,215,0,0.5), inset 0 0 10px rgba(255,255,255,0.2);
-}
-
-.money-text {
-    display: block;
-    font-family: "Oiwai";
-    color: gold;
-    font-size: 1.2em;
-    letter-spacing: 2px;
-}
-
-#money-change {
-    position: absolute;
-    top: 160px;
-    right: 70px;
+body {
+    /* 1. 真っ黒(#070203)
+       2. 深い赤(#2a0505)
+       3. 闇の赤(#0d0101)
+       これらを組み合わせた深みのある赤のスポットライトです 
+    */
+    background: radial-gradient(circle at 50% 50%, #2a0505 0%, #0d0101 60%, #070203 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: "Oiwai", serif;
+    margin: 0;
+    min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
-    gap: 20px;
-    font-size: 3em;
-    font-family: "Oiwai";
-    color: gold;
-    text-shadow: 0 0 10px black;
-    opacity: 0;
-    transition: opacity 0.5s, transform 0.5s;
-    pointer-events: none;
 }
 
-#money-change-img {
-    width: 120px;
-    height: auto;
+/* ざわざわ演出の文字色も、少し明るめの赤にして視認性アップ */
+.zawa-text {
+    color: #a01525; /* より鮮やかな赤 */
+    text-shadow: 0 0 5px rgba(0,0,0,1), 0 0 10px #6e1320;
 }
 
-#money {
-    font-family: "Oiwai";
-    font-size: 3.0em;
-    color: white;
-    position: relative;
-    top: 5px;
-    text-shadow: 0 0 10px gold, 0 0 20px gold;
+header {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* 横方向の中央寄せ */
+    padding-top: 1px;   /* 上からの余白 */
+    margin-bottom: 30px;
 }
 
+/* ─── タイトル・ヘッダー ─── */
 h1 {
     font-family: "Oiwai";
-    font-size: 5em;
-    text-align: center;
-    line-height: 1.2em;
-    font-weight: bold;
-    color: transparent;
-    background: repeating-linear-gradient(0deg, #B67B03 0.1em, #DAAF08 0.2em, #FEE9A0 0.3em, #DAAF08 0.4em, #B67B03 0.5em);
-    -webkit-background-clip: text;
-    background-clip: text;
-    filter: drop-shadow(5px 5px 5px #ffffff);
+    margin-top: 50px; /* 上部からの距離 */
+    margin-bottom: 20px;
+    font-size: 4rem;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(212, 168, 75, 0.5);
+    order: -1; /* flexコンテナ内で一番上に表示させる */
+}
+h2 { font-size: 1rem; color: #888; margin-bottom: 2rem; }
+
+/* ─── 凝縮されたボタンエリア ─── */
+.button-area {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;            /* ボタン間の距離を80pxに拡大 */
+    margin-top: -50px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-h2 {
-    font-family: "Oiwai";
-    font-size: 0.8em;
-    color: white;
-    position: fixed;
-    right: 20px;
-    bottom: 20px;
-    margin: 0;
-    text-shadow: 2px 2px 5px black;
+.coin-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
 }
 
-button {
-    font-family: "Oiwai";
-    position: relative;
-    width: 300px;
-    height: 300px;
-    margin: 15px;
+.casino-btn {
+    width: 280px;
+    height: 280px;
     border-radius: 50%;
-    border: none;
-    font-size: 22px;
+    font-family: "Oiwai";
+    
+    /* 背景と模様 */
+    background: 
+        radial-gradient(circle, #fff 48%, transparent 49%), 
+        conic-gradient(
+            #000 0deg 30deg, #d4a84b 30deg 60deg, 
+            #000 60deg 90deg, #d4a84b 90deg 120deg, 
+            #000 120deg 150deg, #d4a84b 150deg 180deg, 
+            #000 180deg 210deg, #d4a84b 210deg 240deg, 
+            #000 240deg 270deg, #d4a84b 270deg 300deg, 
+            #000 300deg 330deg, #d4a84b 330deg 360deg
+        );
+    
+    border: 10px solid #d4a84b;
+    color: #000;
+    font-size: 1.4rem;
     font-weight: bold;
     cursor: pointer;
-    display: inline-flex;
+    transition: 0.3s;
+    display: flex;
     align-items: center;
     justify-content: center;
-    transition: 0.2s;
-    box-shadow: inset 0 15px 25px rgba(255,255,255,0.5), inset 0 -20px 30px rgba(0,0,0,0.45), 0 15px 25px rgba(0,0,0,0.45);
+    text-align: center;
+
+    /* ─── ここで立体感を演出 ─── */
+    box-shadow: 
+        inset 0 0 20px rgba(255, 255, 255, 0.4), /* 内側の光沢（ハイライト） */
+        inset 0 0 50px rgba(0, 0, 0, 0.6),      /* 内側の深み */
+        0 15px 20px rgba(0, 0, 0, 0.7),         /* 地面に落ちる影 */
+        0 0 10px rgba(212, 168, 75, 0.3);       /* 外側の淡いゴールドの反射 */
 }
 
-button:active { transform: translate(4px, 4px); box-shadow: 4px 4px 0px rgba(0,0,0,0.6); }
-button:hover { transform: scale(1.08); }
+.casino-btn:hover {
+    transform: translateY(-10px) scale(1.05); /* 上に移動して拡大 */
+    box-shadow: 
+        inset 0 0 10px rgba(255, 255, 255, 0.5),
+        0 25px 30px rgba(0, 0, 0, 0.8);
+}
 
-#main1 { color: #008b8b; background: radial-gradient(circle, #fff 55%, transparent 56%), repeating-conic-gradient(aqua 0deg 15deg, #008b8b 15deg 30deg); }
-#main2 { color: #4d9900; background: radial-gradient(circle, #fff 55%, transparent 56%), repeating-conic-gradient(chartreuse 0deg 15deg, #4d9900 15deg 30deg); }
-#main3 { color: #b84a3a; background: radial-gradient(circle, #fff 55%, transparent 56%), repeating-conic-gradient(coral 0deg 15deg, #b84a3a 15deg 30deg); }
-#main4 { color: #b30059; background: radial-gradient(circle, #fff 55%, transparent 56%), repeating-conic-gradient(deeppink 0deg 15deg, #b30059 15deg 30deg); }
+/* ─── 所持金ボックス（右上固定） ─── */
 
-.button-area { text-align: center; margin-top: 100px; }
-.coin-area { position: relative; display: inline-block; }
+.money-box-new, .goal-box {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px 30px;
+    border: 2px solid #d4a84b;
+    border-radius: 10px;
+    color: #d4a84b;
+    font-size: 1.5rem;
+}
 
-.chipbox1 { width: 250px; position: absolute; left: 50%; transform: translateX(-50%); top: 400px; z-index: 0; pointer-events: none; }
-.chipbox2 { width: 250px; position: absolute; left: 50%; transform: translateX(-50%); top: 350px; z-index: 0; pointer-events: none; }
-.chipbox3 { width: 200px; position: absolute; left: 50%; transform: translateX(-50%); top: 320px; z-index: 0; pointer-events: none; }
-.chipbox4 { width: 250px; position: absolute; left: 50%; transform: translateX(-50%); top: 350px; z-index: 0; pointer-events: none; }
+.goal-box { border-color: #a01525; color: #ff4d4d; }
+
+.status-board {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 20px 0 40px 0;
+    font-family: 'Oiwai', serif;
+}
+
+
+#zawa-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none; /* クリックを邪魔しない */
+    z-index: 9999;        /* 最前面に表示 */
+    overflow: hidden;
+}
+
+.zawa-text {
+    font-family: "Oiwai";
+    color: #a01525;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0,0,0,1), 0 0 10px #6e1320;
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: none;
+    position: fixed;
+    
+    /* 回転をなくし、拡大と透明度の変化をアニメーションさせる */
+    transition: opacity 1.5s ease-out, transform 1.5s ease-out;
+}
