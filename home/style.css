@@ -11,13 +11,21 @@
 }
 
 body {
-    /* 1. 真っ黒(#070203)
-       2. 深い赤(#2a0505)
-       3. 闇の赤(#0d0101)
-       これらを組み合わせた深みのある赤のスポットライトです 
+    /* 重ね順のポイント:
+       1. 最後に radial-gradient で中心を赤く光らせる (rgba で透過させる)
+       2. 真ん中に黒い膜を重ねて暗くする
+       3. 最後に背景画像を表示
     */
-    background: radial-gradient(circle at 50% 50%, #2a0505 0%, #0d0101 60%, #070203 100%);
+    background: 
+        radial-gradient(circle at 50% 50%, rgba(160, 21, 37, 0.4) 0%, rgba(0, 0, 0, 0.6) 70%), 
+        url('haikei.png');
+    
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     background-attachment: fixed;
+    background-color: #000;
+    
     color: var(--text);
     font-family: "Oiwai", serif;
     margin: 0;
