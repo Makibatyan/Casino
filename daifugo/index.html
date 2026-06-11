@@ -3,11 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <title>大富豪</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=RocknRoll+One&family=Yuji+Syuku&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     
     <button id="homeBtn">← ホームへ戻る</button>
+
+    <div id="volume-control-pane">
+        <span id="vol-icon font-cinzel">音量</span>
+        <input type="range" id="global-volume-slider" min="0" max="1" step="0.05" value="0.3">
+        <span id="global-volume-val">30%</span>
+    </div>
+    
     <div id="bgm-player" style="display: none;"></div>
     <h1>大富豪</h1>
     
@@ -40,11 +50,18 @@
             <div id="player-hand" class="hand"></div>
         </div>
 
-        <div id="controls">
+       <div id="controls">
             <button id="play-btn">出す</button>
             <button id="pass-btn">パス</button>
             <p id="msg"></p>
         </div>
-    </div>
 
-    <script src="script.js"></script>
+        <div id="zawa-zawa-overlay" class="zawa-zawa-hidden">
+            <div class="zawa top-left">ざわ…</div>
+            <div class="zawa top-right">ざわ…</div>
+            <div class="zawa bottom-left">ざわ…</div>
+            <div class="zawa bottom-right">ざわ…</div>
+        </div>
+    </div> <script src="script.js"></script>
+</body>
+</html>
