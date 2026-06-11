@@ -4,11 +4,34 @@ const raiseSound = new Audio('raise_se.mp3');
 
 const gameBgm = new Audio('bgm.mp3');
 gameBgm.loop = true;
-gameBgm.volume = 0.30; // 音量調整
+gameBgm.volume = 0.30;
 
 const betBgm = new Audio('bet_bgm.mp3'); 
 betBgm.loop = true;
 betBgm.volume = 0.3;
+
+//  全音声の一元管理用リスト
+const allSounds = [cardPlaySound, cardPlaySound2, raiseSound, gameBgm, betBgm];
+
+//  画面右上の音量スライダーのリアルタイム変更イベント
+document.addEventListener("DOMContentLoaded", () => {
+    const volSlider = document.getElementById("global-volume-slider");
+    const volValText = document.getElementById("global-volume-val");
+
+    if (volSlider && volValText) {
+        volSlider.oninput = (e) => {
+            const volume = parseFloat(e.target.value);
+            
+            // すべての音声ファイルの音量を一括書き換え
+            allSounds.forEach(sound => {
+                sound.volume = volume;
+            });
+            
+            // ％表記のテキストを更新（例: 0.3 -> 30%）
+            volValText.innerText = Math.round(volume * 100) + "%";
+        };
+    }
+});
 
 // CPUの10捨て自動処理
 function cpuTenDiscard() {
@@ -477,6 +500,9 @@ function playCards(cards, isPlayer = true) {
         console.log("音声を再生できませんでした（ユーザーの操作が必要です）:", error);
     });
 
+    if (isPlayer) {
+        showZawaZawaEffect();
+    }
 
     // 大革命判定
     if (cards.length === 4 && cards.every(c => c.rank === 2)) {
@@ -771,13 +797,13 @@ document.getElementById('homeBtn').addEventListener('click', () => {
     window.location.href = '../home/home.html'; 
 });
 
-// 💰 ベットスライダーのリアルタイム表示変更
+//  ベットスライダーのリアルタイム表示変更
 document.getElementById("bet-slider").oninput = (e) => {
     const val = parseInt(e.target.value);
     document.getElementById("bet-slider-val").innerText = val.toLocaleString();
 };
 
-// 💰 「勝負開始（レイズ…！）」ボタンを押したときの処理
+// 「勝負開始（レイズ…！）」ボタンを押したときの処理
 document.getElementById("start-with-bet-btn").onclick = () => {
     const selectedBet = parseInt(document.getElementById("bet-slider").value);
 
@@ -847,7 +873,7 @@ function showEndGameChoices() {
         // 「もう一戦（リロード）」ボタン
         const retryBtn = document.createElement("button");
         retryBtn.id = "retry-btn";
-        retryBtn.innerText = "⚡️ もう一戦する（続行）";
+        retryBtn.innerText = "もう一戦する（続行）";
         retryBtn.onclick = () => {
             location.reload(); // ページをリロードして次のゲームへ
         };
@@ -855,7 +881,7 @@ function showEndGameChoices() {
         // 「退出する（ホームへ）」ボタン
         const leaveBtn = document.createElement("button");
         leaveBtn.id = "leave-btn";
-        leaveBtn.innerText = "🚪 退出する（ホームへ）";
+        leaveBtn.innerText = " 退出する（ホームへ）";
         leaveBtn.onclick = () => {
             window.location.href = '../home/home.html'; // ホーム画面へ遷移
         };
@@ -864,6 +890,52 @@ function showEndGameChoices() {
         choiceArea.appendChild(leaveBtn);
         controlsDiv.appendChild(choiceArea);
     }
+}
+function showZawaZawaEffect(cardCount = 1) {
+    const overlay = document.getElementById("zawa-zawa-overlay");
+    if (!overlay) return;
+
+    // 出した枚数に応じて基本サイズをブースト（4枚革命なら1.5倍の圧倒的巨体に）
+    const sizeMultiplier = cardCount >= 4 ? 1.5 : (cardCount === 3 ? 1.25 : 1.0);
+    
+    // 各位置のデフォルトのフォントサイズ定義
+    const baseSizes = {
+        "top-left": 7,
+        "top-right": 6.5,
+        "bottom-left": 7.5,
+        "bottom-right": 8.5
+    };
+
+    const zawas = overlay.querySelectorAll(".zawa");
+    zawas.forEach(zawa => {
+        // 枚数が多いほど文字を「ざわ… ざわ…」に増殖
+        if (cardCount >= 3) {
+            zawa.innerText = "ざわ… ざわ…";
+        } else {
+            zawa.innerText = "ざわ…";
+        }
+
+        // クラス名から位置を特定して、動的にフォントサイズを巨大化
+        let finalSize = 7;
+        if (zawa.classList.contains("top-left")) finalSize = baseSizes["top-left"] * sizeMultiplier;
+        if (zawa.classList.contains("top-right")) finalSize = baseSizes["top-right"] * sizeMultiplier;
+        if (zawa.classList.contains("bottom-left")) finalSize = baseSizes["bottom-left"] * sizeMultiplier;
+        if (zawa.classList.contains("bottom-right")) finalSize = baseSizes["bottom-right"] * sizeMultiplier;
+        
+        zawa.style.fontSize = finalSize + "em";
+    });
+
+    overlay.classList.remove("zawa-zawa-hidden");
+    overlay.classList.add("zawa-zawa-visible");
+
+    // 表示する時間（複数枚のときは少し長めに余韻を残す）
+    const displayTime = cardCount >= 3 ? 1600 : 1200;
+
+    if (window._zawaTimeout) clearTimeout(window._zawaTimeout);
+    window._zawaTimeout = setTimeout(() => {
+        overlay.classList.remove("zawa-zawa-visible");
+        overlay.classList.add("zawa-zawa-hidden");
+    }, displayTime); 
 }
 
 
