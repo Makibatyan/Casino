@@ -939,5 +939,123 @@ function showZawaZawaEffect(cardCount = 1) {
 }
 
 
+// 「ホームへ戻る」ボタンを押したときの処理
+document.getElementById('homeBtn').addEventListener('click', () => {
+    // 1. ゲーム進行中の場合は確認ダイアログを出す
+    if (!gameState.isGameOver) {
+        const leave = confirm(`ゲームの途中ですが、ホーム画面に戻りますか？\n\n※今賭けている${gameState.currentBet.toLocaleString()} ペリカは没収されます`);
+        if (!leave) return; // キャンセルされたら何もしない
+
+        gameState.pelika -= gameState.currentBet;
+        localStorage.setItem('bugging_cash', gameState.pelika);
+    }
+
+    // 2. 裏で動いているメッセージ用タイマー（setTimeout）を安全に停止
+    if (window._msgTimeout) clearTimeout(window._msgTimeout);
+    if (window._msgHideTimeout) clearTimeout(window._msgHideTimeout);
+
+    // 3. ゲームを強制終了状態にして、これ以上のCPUの処理（10捨てやターン進行）の発生を防ぐ
+    gameState.isGameOver = true;
+
+    // 4. 指定のホーム画面へ遷移
+    window.location.href = '../home/home.html'; 
+});
+
+// 💰 ベットスライダーのリアルタイム表示変更
+document.getElementById("bet-slider").oninput = (e) => {
+    const val = parseInt(e.target.value);
+    document.getElementById("bet-slider-val").innerText = val.toLocaleString();
+};
+
+// 💰 「勝負開始（レイズ…！）」ボタンを押したときの処理
+document.getElementById("start-with-bet-btn").onclick = () => {
+    const selectedBet = parseInt(document.getElementById("bet-slider").value);
+
+    raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
+
+    gameState.currentBet = selectedBet;
+    document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString() + " ペリカ";
+    
+    // ベット画面を隠してゲーム画面をアクティブにする
+    document.getElementById("bet-setup-area").style.display = "none";
+    document.getElementById("game-container").style.opacity = "1";
+    
+    // ゲーム用ボタンを有効化して勝負スタート！
+    document.getElementById("play-btn").disabled = false;
+    document.getElementById("pass-btn").disabled = false;
+    showMessage("勝負開始……！ざわざわ……");
+};
+
+if (document.getElementById("bet-slider")) {
+    document.getElementById("bet-slider").oninput = (e) => {
+        const val = parseInt(e.target.value) || 10000000;
+        document.getElementById("bet-slider-val").innerText = val.toLocaleString() + " ペリカ";
+    };
+}
+
+// 💰 「勝負開始（レイズ…！）」ボタンの処理
+if (document.getElementById("start-with-bet-btn")) {
+    document.getElementById("start-with-bet-btn").onclick = () => {
+        const selectedBet = parseInt(document.getElementById("bet-slider").value) || 10000000;
+        
+        raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
+        
+        gameState.currentBet = selectedBet;
+        document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString();
+        
+        betBgm.pause();
+        betBgm.currentTime = 0;
+
+        gameBgm.play().catch(e => console.error("BGM再生エラー:", e));
+
+        document.getElementById("bet-setup-area").style.display = "none";
+        document.getElementById("game-container").style.opacity = "1";
+        
+        document.getElementById("play-btn").disabled = false;
+        document.getElementById("pass-btn").disabled = false;
+        showMessage("勝負開始……！ざわざわ……");
+    };
+}
+
+// 💡 ゲーム終了後に「もう一度」か「退出」かを選ばせるUIを生成する関数
+function showEndGameChoices() {
+    const controlsDiv = document.getElementById("controls");
+    
+    // 既存の「出す」「パス」ボタンを一旦見えなくする
+    document.getElementById("play-btn").style.display = "none";
+    document.getElementById("pass-btn").style.display = "none";
+    
+    // すでに選択ボタンが作られていなければ作成する
+    if (!document.getElementById("retry-btn")) {
+        const choiceArea = document.createElement("div");
+        choiceArea.id = "end-choices";
+        choiceArea.style.marginTop = "20px";
+        choiceArea.style.display = "flex";
+        choiceArea.style.justify = "center";
+        choiceArea.style.gap = "20px";
+        
+        // 「もう一戦（リロード）」ボタン
+        const retryBtn = document.createElement("button");
+        retryBtn.id = "retry-btn";
+        retryBtn.innerText = "⚡️ もう一戦する（続行）";
+        retryBtn.onclick = () => {
+            location.reload(); // ページをリロードして次のゲームへ
+        };
+        
+        // 「退出する（ホームへ）」ボタン
+        const leaveBtn = document.createElement("button");
+        leaveBtn.id = "leave-btn";
+        leaveBtn.innerText = "🚪 退出する（ホームへ）";
+        leaveBtn.onclick = () => {
+            window.location.href = '../home/home.html'; // ホーム画面へ遷移
+        };
+        
+        choiceArea.appendChild(retryBtn);
+        choiceArea.appendChild(leaveBtn);
+        controlsDiv.appendChild(choiceArea);
+    }
+}
+
+
 //　ゲーム開始 
 initGame();
