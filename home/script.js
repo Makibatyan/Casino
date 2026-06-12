@@ -1,26 +1,36 @@
-// script.js
+// script.js の window.onload を以下のように修正してください
 window.onload = function () {
-    
+    // 1. 所持金の計算と表示更新
     const currentMoney = parseInt(localStorage.getItem("bugging_cash")) || 100000000;
-    
     updateMoneyStatus(currentMoney);
 
-    showMoney();
+    // ★修正：showMoney(); を削除しました（定義されていないためエラーになる）
+    
+    // 2. 他の関数はそのまま
     checkAndPlayDiff();
     checkBankruptcy();
-    checkGameClear(); // ページ読み込み時にクリア判定を実行
+    checkGameClear();
 
-
-    
-      
+    // 3. BGMの初期化と再生処理
     const bgm = document.getElementById("bgm");
     function playBgm() {
         bgm.muted = false;
-        bgm.play().catch(e => console.log("再生ブロック中"));
+        bgm.play().catch(e => console.log("自動再生ブロック中"));
     }
     document.body.addEventListener('click', playBgm, { once: true });
     playBgm();
+
+    // script.js の window.onload 内に追加
+    const volumeSlider = document.getElementById("volume-slider");
+    if (volumeSlider && bgm) {
+        // スライダーの値が変わった時に音量を更新
+        volumeSlider.addEventListener("input", (e) => {
+            bgm.volume = e.target.value;
+        });
+    }
 };
+
+
 function updateMoneyStatus(totalMoney) {
     const totalEl = document.getElementById("total-money");
     const goalEl = document.getElementById("remaining-goal");
@@ -44,17 +54,21 @@ function updateMoneyStatus(totalMoney) {
 
 
 
-// ★ここが重要：所持金を判定するように修正しました
 function checkGameClear() {
     const money = parseInt(localStorage.getItem("bugging_cash") || 0, 10);
-    if (money >= 24000000000) {
-        const clearScreen = document.getElementById("clear-screen");
+    const clearScreen = document.getElementById("clear-screen");
+    
+    // クリア判定（240億以上）かつ、現在のページがホームである場合のみ
+    if (money >= 24000000000 && window.location.pathname.includes("home.html")) {
         if (clearScreen) {
             clearScreen.style.display = "block";
-            console.log("クリア判定成功：画面を表示します");
         }
+    } else {
+        // 条件を満たしていない、またはホーム以外なら非表示
+        if (clearScreen) clearScreen.style.display = "none";
     }
 }
+
 
 // 確実にDOMが読み込まれてから開始する
 document.addEventListener("DOMContentLoaded", () => {
@@ -137,14 +151,24 @@ function resetMoney() {
 }
 
 
+// 破産チェックを修正
 function checkBankruptcy() {
-    let money = parseInt(localStorage.getItem("bugging_cash")) || 0;
+    let money = parseInt(localStorage.getItem("bugging_cash") || 0, 10);
     const gameOverScreen = document.getElementById("game-over-screen");
-    
-    // 所持金が0以下なら破産、そうでないなら非表示にする
-    if (money <= 0) {
-        if (gameOverScreen) gameOverScreen.style.display = "block";
+    if (!gameOverScreen) return;
+
+    if (money <= 10000000) {
+        gameOverScreen.style.display = "block";
     } else {
-        if (gameOverScreen) gameOverScreen.style.display = "none";
+        gameOverScreen.style.display = "none"; // 所持金がある時は隠す
     }
+}
+
+// 音楽が正しくHTMLから見つかっているか確認する
+const bgmCheck = document.getElementById("bgm");
+if (bgmCheck) {
+    console.log("オーディオタグを見つけました！");
+    console.log("ソース:", bgmCheck.querySelector('source').src);
+} else {
+    console.error("エラー：ID 'bgm' のオーディオタグが見つかりません！HTMLを確認してください。");
 }
