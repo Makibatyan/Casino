@@ -828,27 +828,36 @@ class PokerGame {
         const cardDiv = document.createElement('div');
         
         if (!isHidden) {
-            let suitClass = '';
-            switch(card.suit) {
-                case '♥': suitClass = 'hearts'; break;
-                case '♦': suitClass = 'diamonds'; break;
-                case '♣': suitClass = 'clubs'; break;
-                case '♠': suitClass = 'spades'; break;
-                default: suitClass = '';
-            }
+            // 記号からクラス名（英語）へ変換する辞書
+            const suitMap = { '♥': 'hearts', '♦': 'diamonds', '♣': 'clubs', '♠': 'spades' };
+            const suitSymbol = card.suit; // ログより記号が入っていることが判明
+            const suitClass = suitMap[suitSymbol] || 'spades'; // 記号がなければデフォルトでスペード
+
             cardDiv.className = `card ${suitClass}`;
             
-            cardDiv.innerHTML = `
-                <div class="suit">${card.suit}</div>
-                <div class="rank">${card.rank}</div>
-            `;
+            // rankが文字列の "J" などでも対応できるようにする
+            const rankDisplay = card.rank;
+            
+            cardDiv.innerHTML = `<div class="suit">${suitSymbol}</div><div class="rank">${rankDisplay}</div>`;
+
+            // 音再生
+            setTimeout(() => {
+                const flipSe = document.getElementById('cardFlipSe');
+                if (flipSe) {
+                    flipSe.currentTime = 0;
+                    flipSe.play().catch(e => console.log("SE再生エラー:", e));
+                }
+            }, 50);
+            
         } else {
             cardDiv.className = 'card back';
-            cardDiv.innerHTML = '?';
+            cardDiv.textContent = '?';
         }
         
         return cardDiv;
     }
+    
+    
 
     endRound(winner) {
         document.body.classList.remove('all-in-active');
