@@ -967,22 +967,34 @@ class PokerGame {
 
 const game = new PokerGame();
 
-// 画面全体の初回クリックでBGMを再生（ブラウザ対策）
-document.addEventListener('click', () => {
+// ─── 音量管理と自動再生の統合スクリプト ───
+document.addEventListener("DOMContentLoaded", () => {
+    const volSlider = document.getElementById("global-volume-slider");
+    const volValText = document.getElementById("global-volume-val");
     const bgm = document.getElementById('bgm');
-    if (bgm && bgm.paused) {
-        bgm.volume = 0.2; // 音量20%
-        bgm.play().catch(err => console.log("再生エラー:", err));
-    }
-}, { once: true }); // once: true で1回だけ実行されるようにする
 
-// ホームに戻る直前に所持金を保存する関数
-function goHome() {
-    // 念のため game.playerChips が存在するか確認してから保存
-    if (typeof game !== 'undefined' && game.playerChips !== undefined) {
-        localStorage.setItem('bugging_cash', game.playerChips);
+    // 音量バーの動作
+    if (volSlider && volValText) {
+        volSlider.oninput = (e) => {
+            const volume = parseFloat(e.target.value);
+            // BGMと効果音を一括制御するなら以下のように追加
+            const allAudios = [bgm, document.getElementById('clickSe'), document.getElementById('cardFlipSe'), document.getElementById('impactSe')];
+            allAudios.forEach(audio => { if(audio) audio.volume = volume; });
+            
+            volValText.innerText = Math.round(volume * 100) + "%";
+        };
     }
-    // ホームへ移動
-    location.href = '../home/home.html';
-}
 
+    // 自動再生処理
+    if (bgm) {
+        bgm.volume = 0.2;
+        bgm.play().catch(() => {
+            console.log("自動再生ブロック。クリックで開始");
+            const startAudio = () => {
+                bgm.play();
+                document.removeEventListener('click', startAudio);
+            };
+            document.addEventListener('click', startAudio, { once: true });
+        });
+    }
+});

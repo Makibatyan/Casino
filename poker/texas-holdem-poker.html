@@ -384,7 +384,7 @@
 
         .bet-adjust-btn {
             background: #3a0000;
-            padding: 6px 18px;
+            padding: 6px 24px;
             font-size: 0.8rem;
             border-radius: 12px;
             color: white;
@@ -393,7 +393,7 @@
         }
 
         .bet-input {
-            width: 200px;
+            width: 180px;
             background: #0a0000;
             border: 1px solid rgba(255, 59, 48, 0.4);
             border-radius: 6px;
@@ -473,12 +473,42 @@
             opacity: 0.5; /* 透過度（0.5 = 半透明。もっと薄くしたければ 0.3 とかにしてください） */
             animation: zawaVibration 0.5s infinite linear; /* 高速でガタガタ震えます */
         }
-    </style>
-</head>
-<body>
-    <audio id="bgm" src="casino 2.mp3" loop></audio>
-    <button id="homeBtn" onclick="goHome()">← ホームへ戻る</button>
+
+        /* 音量バーを右上に固定する設定 */
+        .volume-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000; /* 他の要素より手前に表示 */
+        }
+
+        #volume-control-pane {
+            background: rgba(0, 0, 0, 0.7); /* 少し濃い背景で視認性アップ */
+            padding: 8px 12px;
+            border-radius: 20px; /* 角を丸く */
+            color: #fff;
+            font-size: 14px;
+        }
+
+        #global-volume-slider {
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        </style>
+    </head>
+    <body>
     
+    <button id="homeBtn" onclick="location.href='../home/home.html';">← ホームへ戻る</button>
+
+    <!-- 💡 右上に固定するためのコンテナ -->
+    <div class="volume-container">
+        <div id="volume-control-pane">
+            <span id="vol-icon">音量</span>
+            <input type="range" id="global-volume-slider" min="0" max="1" step="0.05" value="0.2">
+            <span id="global-volume-val">20%</span>
+        </div>
+    </div>
+
     <div class="game-container">
         <header>
             <h1>TEXAS HOLD'EM</h1>
@@ -493,7 +523,7 @@
         <div class="table-area">
             <div class="player-area" id="computerSection">
                 <div class="player-info">
-                    <span>CPU</span>
+                    <span>ハンチョウ</span>
     <span id="computerChips" style="display: none;"></span>                    <span id="cpuRaiseStatus" style="display: none;">レイズ: <span id="cpuRaiseAmount">0</span></span>
                 </div>
                 <div class="player-cards" id="computerCards"></div>
@@ -524,13 +554,18 @@
         </div>
         
         <div class="bet-controls" id="betControls" style="display: none;">
-            <button id="decreaseBetBtn" class="bet-adjust-btn">−100万ペリカ</button>
+            <button id="decreaseBetBtn" class="bet-adjust-btn">−1000万ペリカ</button>
             <input type="number" id="betAmount" class="bet-input" min="10" step="10" value="10">
-            <button id="increaseBetBtn" class="bet-adjust-btn">+100万ペリカ</button>
+            <button id="increaseBetBtn" class="bet-adjust-btn">+1000万ペリカ</button>
             <button id="confirmRaiseBtn" class="bet-confirm-btn">確定</button>
             <button id="cancelRaiseBtn" class="bet-adjust-btn" style="background: #111;">×</button>
         </div>
     </div>
+
+    <audio id="bgm" src="casino%202.mp3" loop></audio>
+    <audio id="clickSe" src="決定ボタンを押す50.mp3"></audio>
+    <audio id="cardFlipSe" src="カードをめくる.mp3"></audio>
+    <audio id="impactSe" src="文字表示の衝撃音3.mp3"></audio>
 
     <div class="zawazawa-text zawa-top-left">ざわ…<br>　　ざわ…</div>
     <div class="zawazawa-text zawa-top-right">　　　ざわ… <br>ざわ…</div>
