@@ -535,50 +535,42 @@ function initSlot() {
   addLog('🎰 命を賭した勝負が今、始まる…！', 'info');
 }
 
-// ─── YouTube BGM 設定 ────────────────────────────────
-let bgmPlayer;
+// ─── ローカル音源 BGM 設定（完全同期・大富豪スタイル） ───
+const slotBgm = new Audio('casino.mp3');
+slotBgm.loop = true;
+slotBgm.volume = 0.3; // 初期音量
 
-// 1. ページ読み込み時にYouTubeのAPIスクリプトを自動でHTMLに差し込む
-(function loadYoutubeAPI() {
-  const tag = document.createElement('script');
-  tag.src = "https://www.youtube.com/iframe_api";
-  const firstScriptTag = document.getElementsByTagName('script')[0];
-  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-})();
+document.addEventListener("DOMContentLoaded", () => {
+    const volSlider = document.getElementById("global-volume-slider");
+    const volValText = document.getElementById("global-volume-val");
 
-// 2. APIの準備ができたら自動で呼ばれる関数
-window.onYouTubeIframeAPIReady = function() {
-  // bodyの末尾に、BGM用の隠し要素を自動作成
-  const bgmDiv = document.createElement('div');
-  bgmDiv.id = 'bgm-player';
-  document.body.appendChild(bgmDiv);
+    // 【1. 数値の初期表示】スライダーの現在値(value)に合わせて表示を即座に更新する
+    if (volSlider && volValText) {
+        const initialVolume = parseFloat(volSlider.value);
+        slotBgm.volume = initialVolume;
+        volValText.innerText = Math.round(initialVolume * 100) + "%";
 
-  bgmPlayer = new YT.Player('bgm-player', {
-    height: '0',
-    width: '0',
-    videoId: '0is4q9mlFHU', // あなたの動画ID
-    playerVars: {
-      'playsinline': 1,
-      'loop': 1,
-      'playlist': '0is4q9mlFHU'
-    },
-    events: {
-      'onReady': (event) => {
-        event.target.mute();      // 最初は音なしで再生開始
-        event.target.playVideo();
-      }
+        // 【2. 操作時の更新】
+        volSlider.oninput = (e) => {
+            const volume = parseFloat(e.target.value);
+            slotBgm.volume = volume;
+            volValText.innerText = Math.round(volume * 100) + "%";
+        };
     }
-  });
-};
 
-// 3. ユーザーが画面のどこかをクリックしたらミュートを解除する
-window.addEventListener('click', () => {
-  if (bgmPlayer && typeof bgmPlayer.unMute === 'function') {
-    bgmPlayer.unMute();
-    bgmPlayer.setVolume(30); // 音量は0〜100（スロットの邪魔にならないよう30%程度に設定）
-    bgmPlayer.playVideo();
-  }
-}, { once: true }); // 最初の1回だけ実行
+    // 【3. 自動再生の試行】ページ読み込み完了時に再生を試みる
+    // ※ブラウザ設定で自動再生が許可されていれば、クリックなしで鳴ります
+    slotBgm.play().then(() => {
+        console.log("BGM自動再生成功");
+    }).catch(() => {
+        console.log("自動再生が制限されています。クリックで開始します");
+        // 失敗した場合は、画面のどこかがクリックされたら鳴るようにする
+        window.addEventListener('click', () => {
+            slotBgm.play();
+        }, { once: true });
+    });
+});
 
-// エントリーポイント
-initSlot();
+// ─── スロットゲーム起動 ───
+if (typeof init === 'function') init();
+else if (typeof initSlot === 'function') initSlot();

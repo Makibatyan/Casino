@@ -685,6 +685,39 @@
             opacity: 0.5; /* 透過度（0.5 = 半透明。もっと薄くしたければ 0.3 とかにしてください） */
             animation: zawaVibration 0.5s infinite linear; /* 高速でガタガタ震えます */
         }
+
+        /* 音量バーを右上に固定する設定 */
+        .volume-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000; /* 他の要素より手前に表示 */
+        }
+
+        #volume-control-pane {
+            background: rgba(0, 0, 0, 0.7); /* 少し濃い背景で視認性アップ */
+            padding: 8px 12px;
+            border-radius: 20px; /* 角を丸く */
+            color: #fff;
+            font-size: 14px;
+        }
+
+        #global-volume-slider {
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        </style>
+    </head>
+    <body>
+    
+    <button id="homeBtn" onclick="location.href='../home/home.html';">← ホームへ戻る</button>
+
+    <!-- 💡 右上に固定するためのコンテナ -->
+    <div class="volume-container">
+        <div id="volume-control-pane">
+            <span id="vol-icon">音量</span>
+            <input type="range" id="global-volume-slider" min="0" max="1" step="0.05" value="0.2">
+            <span id="global-volume-val">20%</span>
     </style>
 </head>
 <body>
@@ -783,7 +816,7 @@
         </div>
     </div>
 
-    <audio id="bgm" src="casino 2.mp3" loop></audio>
+
     <audio id="clickSe" src="決定ボタンを押す50.mp3"></audio>
     <audio id="cardFlipSe" src="カードをめくる.mp3"></audio>
     <audio id="impactSe" src="winner.mp3"></audio>
