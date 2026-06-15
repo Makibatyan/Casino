@@ -17,6 +17,7 @@ body {
     border-radius: 24px;
     box-shadow: 0 24px 80px rgba(80,0,0,0.45), 0 0 0 8px #b88a3a44;
     backdrop-filter: blur(14px);
+    position: relative;
 }
 #game-container h1, #game-container p, #game-container span, button {
     text-shadow: 0 0 18px #b88a3a88, 0 0 30px #7a1a1a44;
@@ -170,4 +171,116 @@ button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
     box-shadow: 0 0 20px #ff4500, 0 0 10px #ffd700;
     transform: scale(1.05);
     transition: all 0.2s;
+}
+
+/* 音量設定パネルのスタイル */
+#volume-control-pane {
+    position: fixed;
+    top: 16px;
+    right: 16px; /* 画面の右上につまみを固定 */
+    background: rgba(40, 0, 0, 0.9);
+    border: 1px solid #b88a3a;
+    border-radius: 12px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5), 0 0 10px #b88a3a44;
+    z-index: 1001; /* メッセージウインドウ(1000)より前面に配置 */
+}
+
+#volume-control-pane span {
+    color: #ffd700;
+    font-size: 13px;
+    font-weight: bold;
+    text-shadow: 0 0 6px #b88a3a88;
+}
+
+#global-volume-slider {
+    width: 90px;
+    cursor: pointer;
+    accent-color: #ff4500; /* カイジ風の赤・オレンジ系つまみ */
+    vertical-align: middle;
+}
+
+#zawa-zawa-overlay {
+    position: fixed; /* 👈 fixed に戻して画面全体の端を基準にする */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none; /* マウス操作を邪魔しない */
+    z-index: 2000; /* 最前面に表示 */
+    transition: opacity 0.4s ease;
+}
+
+#zawa-zawa-overlay.zawa-zawa-hidden {
+    opacity: 0;
+    display: none;
+}
+
+#zawa-zawa-overlay.zawa-zawa-visible {
+    opacity: 1;
+    display: block;
+}
+
+/* 各「ざわ」テキストの共通スタイル */
+.zawa {
+    position: absolute;
+    color: #ffd700; /* 金色 */
+    font-family: 'Times New Roman', serif;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    /* 黒の太縁＋赤と金のフレア */
+    text-shadow: 
+        -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+        0 0 25px #ff4500, 0 0 50px #b88a3a;
+    pointer-events: none;
+}
+
+/* 🎲 傾き（回転）なしで、フルスクリーン時の「画面の本当の四隅」に配置 */
+.zawa.top-left { 
+    top: 24px; 
+    left: 30px; 
+    font-size: 7em;
+    animation: zawaHorizontalShake 0.15s infinite linear;
+}
+.zawa.top-right { 
+    top: 20px; 
+    right: 30px; 
+    font-size: 6.5em;
+    animation: zawaHorizontalShakeSlow 0.25s infinite linear;
+    animation-delay: 0.05s;
+}
+.zawa.bottom-left { 
+    bottom: 24px; 
+    left: 30px; 
+    font-size: 7.5em;
+    animation: zawaHorizontalShakeSlow 0.22s infinite linear;
+    animation-delay: 0.1s;
+}
+.zawa.bottom-right { 
+    bottom: 20px; 
+    right: 30px; 
+    font-size: 8.5em;
+    animation: zawaHorizontalShake 0.12s infinite linear;
+    animation-delay: 0.02s;
+}
+
+/* 🎲 横揺れアニメーション（超高速・強烈） */
+@keyframes zawaHorizontalShake {
+    0% { transform: translateX(0px); }
+    25% { transform: translateX(-8px); }
+    50% { transform: translateX(0px); }
+    75% { transform: translateX(8px); }
+    100% { transform: translateX(0px); }
+}
+
+/* 🎲 横揺れアニメーション（中速・大きく揺れる） */
+@keyframes zawaHorizontalShakeSlow {
+    0% { transform: translateX(0px); }
+    25% { transform: translateX(-12px); }
+    50% { transform: translateX(0px); }
+    75% { transform: translateX(12px); }
+    100% { transform: translateX(0px); }
 }

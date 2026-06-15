@@ -1176,7 +1176,7 @@ Sound.updateVolumeUI();
 Sound.initBgm();
 
 els.btnStart.addEventListener("click", () => {
-  Sound.init();
+  Sound.unlockAndPlayBgm();
   startGame();
 });
 els.btnRestart.addEventListener("click", restartGame);

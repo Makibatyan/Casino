@@ -4,11 +4,34 @@ const raiseSound = new Audio('raise_se.mp3');
 
 const gameBgm = new Audio('bgm.mp3');
 gameBgm.loop = true;
-gameBgm.volume = 0.30; // 音量調整
+gameBgm.volume = 0.30;
 
 const betBgm = new Audio('bet_bgm.mp3'); 
 betBgm.loop = true;
 betBgm.volume = 0.3;
+
+//  全音声の一元管理用リスト
+const allSounds = [cardPlaySound, cardPlaySound2, raiseSound, gameBgm, betBgm];
+
+//  画面右上の音量スライダーのリアルタイム変更イベント
+document.addEventListener("DOMContentLoaded", () => {
+    const volSlider = document.getElementById("global-volume-slider");
+    const volValText = document.getElementById("global-volume-val");
+
+    if (volSlider && volValText) {
+        volSlider.oninput = (e) => {
+            const volume = parseFloat(e.target.value);
+            
+            // すべての音声ファイルの音量を一括書き換え
+            allSounds.forEach(sound => {
+                sound.volume = volume;
+            });
+            
+            // ％表記のテキストを更新（例: 0.3 -> 30%）
+            volValText.innerText = Math.round(volume * 100) + "%";
+        };
+    }
+});
 
 // CPUの10捨て自動処理
 function cpuTenDiscard() {
@@ -477,6 +500,9 @@ function playCards(cards, isPlayer = true) {
         console.log("音声を再生できませんでした（ユーザーの操作が必要です）:", error);
     });
 
+    if (isPlayer) {
+        showZawaZawaEffect();
+    }
 
     // 大革命判定
     if (cards.length === 4 && cards.every(c => c.rank === 2)) {
@@ -701,17 +727,6 @@ function checkWin(playerName) {
         
         document.getElementById("player-pelika").innerText = gameState.pelika.toLocaleString();
         showResult(`🎉 ${winReason}\n【+${winAmount.toLocaleString()} ペリカ】を獲得……！`);
-        
-
-        
-        if (gameState.pelika >= 24000000000) {
-            saveShared(); // 必要に応じて現在の状態を保存
-            setTimeout(() => {
-                window.location.href = '../home/home.html?clear=true';
-            }, 2000);
-            return; // 遷移するので以降の処理を止める
-        }
-        
         showEndGameChoices(); 
         return;
     }
@@ -748,17 +763,181 @@ function checkWin(playerName) {
             setTimeout(() => {
                 alert("破産……！！\n\nくそっっっっっっっっっっっ！\nなんでだよぉぉぉぉぉ！！！！！！");
                 
-                
-                localStorage.setItem('bugging_cash', 0);
+                // 次回のためにペリカを初期の1億に戻してセーブしておく
+                localStorage.setItem('bugging_cash', 100000000);
                 
                 // 強制的に退出（ホームへ戻る）
-                window.location.href = '../home/home.html?gameover=true';
+                window.location.href = '../home/home.html';
             }, 1500); 
             return; 
         }
         showEndGameChoices(); 
     }
 }
+
+// 「ホームへ戻る」ボタンを押したときの処理
+document.getElementById('homeBtn').addEventListener('click', () => {
+    // 1. ゲーム進行中の場合は確認ダイアログを出す
+    if (!gameState.isGameOver) {
+        const leave = confirm(`ゲームの途中ですが、ホーム画面に戻りますか？\n\n※今賭けている${gameState.currentBet.toLocaleString()} ペリカは没収されます`);
+        if (!leave) return; // キャンセルされたら何もしない
+
+        gameState.pelika -= gameState.currentBet;
+        localStorage.setItem('bugging_cash', gameState.pelika);
+    }
+
+    // 2. 裏で動いているメッセージ用タイマー（setTimeout）を安全に停止
+    if (window._msgTimeout) clearTimeout(window._msgTimeout);
+    if (window._msgHideTimeout) clearTimeout(window._msgHideTimeout);
+
+    // 3. ゲームを強制終了状態にして、これ以上のCPUの処理（10捨てやターン進行）の発生を防ぐ
+    gameState.isGameOver = true;
+
+    // 4. 指定のホーム画面へ遷移
+    window.location.href = '../home/home.html'; 
+});
+
+//  ベットスライダーのリアルタイム表示変更
+document.getElementById("bet-slider").oninput = (e) => {
+    const val = parseInt(e.target.value);
+    document.getElementById("bet-slider-val").innerText = val.toLocaleString();
+};
+
+// 「勝負開始（レイズ…！）」ボタンを押したときの処理
+document.getElementById("start-with-bet-btn").onclick = () => {
+    const selectedBet = parseInt(document.getElementById("bet-slider").value);
+
+    raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
+
+    gameState.currentBet = selectedBet;
+    document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString() + " ペリカ";
+    
+    // ベット画面を隠してゲーム画面をアクティブにする
+    document.getElementById("bet-setup-area").style.display = "none";
+    document.getElementById("game-container").style.opacity = "1";
+    
+    // ゲーム用ボタンを有効化して勝負スタート！
+    document.getElementById("play-btn").disabled = false;
+    document.getElementById("pass-btn").disabled = false;
+    showMessage("勝負開始……！ざわざわ……");
+};
+
+if (document.getElementById("bet-slider")) {
+    document.getElementById("bet-slider").oninput = (e) => {
+        const val = parseInt(e.target.value) || 10000000;
+        document.getElementById("bet-slider-val").innerText = val.toLocaleString() + " ペリカ";
+    };
+}
+
+// 💰 「勝負開始（レイズ…！）」ボタンの処理
+if (document.getElementById("start-with-bet-btn")) {
+    document.getElementById("start-with-bet-btn").onclick = () => {
+        const selectedBet = parseInt(document.getElementById("bet-slider").value) || 10000000;
+        
+        raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
+        
+        gameState.currentBet = selectedBet;
+        document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString();
+        
+        betBgm.pause();
+        betBgm.currentTime = 0;
+
+        gameBgm.play().catch(e => console.error("BGM再生エラー:", e));
+
+        document.getElementById("bet-setup-area").style.display = "none";
+        document.getElementById("game-container").style.opacity = "1";
+        
+        document.getElementById("play-btn").disabled = false;
+        document.getElementById("pass-btn").disabled = false;
+        showMessage("勝負開始……！ざわざわ……");
+    };
+}
+
+// 💡 ゲーム終了後に「もう一度」か「退出」かを選ばせるUIを生成する関数
+function showEndGameChoices() {
+    const controlsDiv = document.getElementById("controls");
+    
+    // 既存の「出す」「パス」ボタンを一旦見えなくする
+    document.getElementById("play-btn").style.display = "none";
+    document.getElementById("pass-btn").style.display = "none";
+    
+    // すでに選択ボタンが作られていなければ作成する
+    if (!document.getElementById("retry-btn")) {
+        const choiceArea = document.createElement("div");
+        choiceArea.id = "end-choices";
+        choiceArea.style.marginTop = "20px";
+        choiceArea.style.display = "flex";
+        choiceArea.style.justify = "center";
+        choiceArea.style.gap = "20px";
+        
+        // 「もう一戦（リロード）」ボタン
+        const retryBtn = document.createElement("button");
+        retryBtn.id = "retry-btn";
+        retryBtn.innerText = "もう一戦する（続行）";
+        retryBtn.onclick = () => {
+            location.reload(); // ページをリロードして次のゲームへ
+        };
+        
+        // 「退出する（ホームへ）」ボタン
+        const leaveBtn = document.createElement("button");
+        leaveBtn.id = "leave-btn";
+        leaveBtn.innerText = " 退出する（ホームへ）";
+        leaveBtn.onclick = () => {
+            window.location.href = '../home/home.html'; // ホーム画面へ遷移
+        };
+        
+        choiceArea.appendChild(retryBtn);
+        choiceArea.appendChild(leaveBtn);
+        controlsDiv.appendChild(choiceArea);
+    }
+}
+function showZawaZawaEffect(cardCount = 1) {
+    const overlay = document.getElementById("zawa-zawa-overlay");
+    if (!overlay) return;
+
+    // 出した枚数に応じて基本サイズをブースト（4枚革命なら1.5倍の圧倒的巨体に）
+    const sizeMultiplier = cardCount >= 4 ? 1.5 : (cardCount === 3 ? 1.25 : 1.0);
+    
+    // 各位置のデフォルトのフォントサイズ定義
+    const baseSizes = {
+        "top-left": 7,
+        "top-right": 6.5,
+        "bottom-left": 7.5,
+        "bottom-right": 8.5
+    };
+
+    const zawas = overlay.querySelectorAll(".zawa");
+    zawas.forEach(zawa => {
+        // 枚数が多いほど文字を「ざわ… ざわ…」に増殖
+        if (cardCount >= 3) {
+            zawa.innerText = "ざわ… ざわ…";
+        } else {
+            zawa.innerText = "ざわ…";
+        }
+
+        // クラス名から位置を特定して、動的にフォントサイズを巨大化
+        let finalSize = 7;
+        if (zawa.classList.contains("top-left")) finalSize = baseSizes["top-left"] * sizeMultiplier;
+        if (zawa.classList.contains("top-right")) finalSize = baseSizes["top-right"] * sizeMultiplier;
+        if (zawa.classList.contains("bottom-left")) finalSize = baseSizes["bottom-left"] * sizeMultiplier;
+        if (zawa.classList.contains("bottom-right")) finalSize = baseSizes["bottom-right"] * sizeMultiplier;
+        
+        zawa.style.fontSize = finalSize + "em";
+    });
+
+    overlay.classList.remove("zawa-zawa-hidden");
+    overlay.classList.add("zawa-zawa-visible");
+
+    // 表示する時間（複数枚のときは少し長めに余韻を残す）
+    const displayTime = cardCount >= 3 ? 1600 : 1200;
+
+    if (window._zawaTimeout) clearTimeout(window._zawaTimeout);
+    window._zawaTimeout = setTimeout(() => {
+        overlay.classList.remove("zawa-zawa-visible");
+        overlay.classList.add("zawa-zawa-hidden");
+    }, displayTime); 
+}
+
 
 // 「ホームへ戻る」ボタンを押したときの処理
 document.getElementById('homeBtn').addEventListener('click', () => {

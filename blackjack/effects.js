@@ -362,9 +362,9 @@ const FX = {
     requestAnimationFrame(() => wrap.classList.add("cutin-live"));
 
     setKaijiLine("tension");
-    Sound?.play("zawazawa");
-    setTimeout(() => Sound?.play("zawazawa"), 120);
-    setTimeout(() => Sound?.play("zawazawa"), 380);
+    // 画像カットイン専用: ざわざわ2秒クリップ + whoosh
+    Sound?.play("cutinZawazawa");
+    Sound?.play("cutinWhoosh", { volume: 0.92 });
 
     await this.delay(1850);
     wrap.classList.add("cutin-out");
