@@ -41,10 +41,13 @@ class PokerGame {
         this.communityCards = [];           // 共有カード（5枚）
         this.playerHand = [];               // プレイヤーの手札（2枚）
         this.computerHand = [];             // コンピューターの手札（2枚）
+
+        this.lastCommunityCardsCount = 0;
+        this.lastGamePhase = "";
         
         // 万とベット関連
         this.pot = 0;                       // ポット（賭け金の合計）
-        this.playerChips = parseInt(localStorage.getItem('bugging_cash')) || 100000000;            // プレイヤーの万
+        this.playerChips = parseInt(localStorage.getItem('bugging_cash')) || 10000000;             // プレイヤーの万（初期1000万ペリカ）
         this.computerChips = 1000000000000000;   // コンピューターの万
         this.currentBet = 0;                // 現在のベット額
         this.playerBet = 0;                 // プレイヤーのベット額
@@ -108,6 +111,14 @@ class PokerGame {
         this.roundStartPlayer = 0;
         this.hasActedThisRound = [false, false];
         document.body.classList.remove('all-in-active');
+
+        //次のゲームが始まったら通常BGMに戻し、ざわBGMのボリュームを下げる
+        const zawaBgm = document.getElementById('zawazawaBgm');
+        if (zawaBgm) {
+            zawaBgm.pause();
+            zawaBgm.currentTime = 0; // 再生位置を最初に戻しておく
+        }
+        VolumeManager.applyBgm(); // 音量を通常状態へ復元
 
         // CPUレイズ表示を非表示
         document.getElementById('cpuRaiseStatus').style.display = 'none';
@@ -417,6 +428,7 @@ class PokerGame {
             }
             this.gamePhase = 'showdown';
             this.updateGameStatus('オールイン！すべてのカードをオープンします。');
+            this.updateUI(); // ★追加：残りのコミュニティカードを表示し、めくるSEを再生する
             setTimeout(() => this.showdown(), 1500);
             return;
         }
@@ -442,7 +454,7 @@ class PokerGame {
         const hand = this.computerHand;
         const cpuChips = this.computerChips;
         const cpuCurrentBet = this.computerBet;
-        const playerName = 'コンピューター';
+        const playerName = 'ハンチョウ';
         
         // 1. ハンドの純粋な強さを評価 (0 ~ 8)
         const computerHandEval = HandEvaluator.evaluateHand([...hand, ...this.communityCards]);
@@ -726,6 +738,15 @@ class PokerGame {
 
     showdown() {
         this.gamePhase = 'showdown';
+
+        // ★ここを追加：結果画面（ショーダウン）に入ったので、ざわざわ演出とBGMを止める
+        document.body.classList.remove('all-in-active');
+        const zawaBgm = document.getElementById('zawazawaBgm');
+        if (zawaBgm) {
+            zawaBgm.pause();
+            zawaBgm.currentTime = 0;
+        }
+        VolumeManager.applyBgm(); // 通常BGMの音量を戻す（勝敗決定の瞬間に通常BGMが流れます）
         
         const hands = [
             { player: 0, hand: HandEvaluator.evaluateHand([...this.playerHand, ...this.communityCards]), name: 'プレイヤー' },
@@ -751,10 +772,10 @@ class PokerGame {
         if (this.computerBet >= 0) {
             const computerHand = hands[1];
             document.getElementById('computerHandRank').textContent = computerHand.hand.rankName || computerHand.hand.name;
-            comparisonMessage += `コンピューター: ${computerHand.hand.rankName || computerHand.hand.name}\n`;
+            comparisonMessage += `ハンチョウ: ${computerHand.hand.rankName || computerHand.hand.name}\n`;
         } else {
             document.getElementById('computerHandRank').textContent = 'フォールド';
-            comparisonMessage += `コンピューター: フォールド\n`;
+            comparisonMessage += `ハンチョウ: フォールド\n`;
         }
         
         const winner = activeHands[0]; 
@@ -795,8 +816,9 @@ class PokerGame {
                     area.style.boxShadow = '';
                 });
             }, 800);
-            
-            this.gamePhase = 'ended';
+            setTimeout(() => {
+                this.gamePhase = 'ended';
+            }, 2000);
         }
     }
 
@@ -861,6 +883,13 @@ class PokerGame {
 
     endRound(winner) {
         document.body.classList.remove('all-in-active');
+        const zawaBgm = document.getElementById('zawazawaBgm');
+        if (zawaBgm) {
+            zawaBgm.pause();
+            zawaBgm.currentTime = 0;
+        }
+        VolumeManager.applyBgm();
+        
         localStorage.setItem('shared_chips', this.playerChips);
         this.gamePhase = 'ended'; // 演出が入る前にフェーズをendedへ移行
         
@@ -890,7 +919,21 @@ class PokerGame {
                 this.updateGameStatus('破産しました…強制退室します。');
                 localStorage.setItem('bugging_cash', 0); // ローカルストレージも0に更新
                 
+                // 1.5秒だけ破産メッセージを見せてからホームへ戻る
+                setTimeout(() => {
+                    window.location.href = '../home.html';
+                }, 1500);
+                return; // ここで処理を終了し、下の「新しいゲーム」ボタン復活などはさせない
+            }
 
+            if (this.playerChips >= 24000000000) {
+                this.updateGameStatus('240億ペリカ達成…！ホームに戻ります。');
+                
+                setTimeout(() => {
+                    window.location.href = '../home.html';
+                }, 1500);
+
+                return; // 以降の処理を中断
             }
 
             this.updateGameStatus('ゲーム終了。新しいゲームを開始するにはページを更新してください。');
@@ -907,12 +950,39 @@ class PokerGame {
     checkAllInStatus() {
         if (this.playerChips === 0 && this.gamePhase !== 'ended' && this.gamePhase !== 'waiting') {
             document.body.classList.add('all-in-active');
+
+            // ざわつきBGMの再生コントロール
+            const zawaBgm = document.getElementById('zawazawaBgm');
+            if (zawaBgm && zawaBgm.paused) {
+                zawaBgm.volume = 0; // 一旦ミュートで再生開始して
+                zawaBgm.play().catch(err => console.log("ざわBGM再生エラー:", err));
+            }
+            
+            // 音量バランスを再計算（通常BGMを0に、ざわBGMを現在の音量に）
+            VolumeManager.applyBgm();
         }
     }
+    
 
     // ★★★ HTML構造に合わせて最適化したUI更新メソッド ★★★
     updateUI() {
         localStorage.setItem('bugging_cash', this.playerChips);
+
+        if (this.communityCards && this.communityCards.length > this.lastCommunityCardsCount) {
+            // 前回のカード枚数より増えていたら、カードをめくるSEを再生
+            playCardFlipSe();
+        }
+        // 現在の枚数を記憶する（ゲームがリセットされて0枚になった時も自動追従します）
+        this.lastCommunityCardsCount = this.communityCards ? this.communityCards.length : 0;
+
+
+        if (this.gamePhase === 'showdown' && this.lastGamePhase !== 'showdown') {
+            playImpactSe();
+        }
+        // 現在のフェーズを記憶する
+        this.lastGamePhase = this.gamePhase;
+
+
 
         console.log("Current Phase:", this.gamePhase, "Player:", this.currentPlayer);
         document.getElementById('potAmount').textContent = this.pot.toLocaleString(); // 修正
@@ -974,6 +1044,102 @@ class PokerGame {
     }
 }
 
+// ==================== 音量管理 ====================
+const VolumeManager = {
+    bgmBase: 0.20,   // BGMの基準音量（スライダー初期値 20/100 に対応）
+    seBase:  0.50,   // SEの基準音量（スライダー初期値 50/100 に対応）
+    muted: false,
+
+    // SE音量を0〜1で取得
+    getSeVolume() {
+        if (this.muted) return 0;
+        const slider = document.getElementById('seVolume');
+        return slider ? parseInt(slider.value) / 100 : this.seBase;
+    },
+
+    // BGM音量を0〜1で取得
+    getBgmVolume() {
+        if (this.muted) return 0;
+        const slider = document.getElementById('bgmVolume');
+        return slider ? parseInt(slider.value) / 100 : this.bgmBase;
+    },
+
+    // BGMに現在の音量を即時適用
+    applyBgm() {
+        const bgm = document.getElementById('bgm');
+        const zawaBgm = document.getElementById('zawazawaBgm');
+        const isAllIn = document.body.classList.contains('all-in-active');
+
+        // 通常のBGM音量
+        if (bgm) {
+            bgm.volume = isAllIn ? 0 : this.getBgmVolume();
+        }
+        // ざわつきBGMの音量（オールイン時のみ音を出す）
+        if (zawaBgm) {
+            zawaBgm.volume = isAllIn ? this.getBgmVolume() : 0;
+        }
+    },
+
+    // ミュートアイコンを状態に応じて切り替え
+    updateMuteIcon() {
+        const btn = document.getElementById('masterMuteBtn');
+        if (!btn) return;
+        btn.textContent = this.muted ? '🔇' : '🔊';
+    }
+};
+
+// スライダー・ミュートボタンのイベントを初期化
+function initVolumeControls() {
+    const bgmSlider = document.getElementById('bgmVolume');
+    const seSlider  = document.getElementById('seVolume');
+    const muteBtn   = document.getElementById('masterMuteBtn');
+
+    if (bgmSlider) {
+        bgmSlider.addEventListener('input', () => VolumeManager.applyBgm());
+    }
+    if (seSlider) {
+        // SE確認：スライダーを動かしたらクリック音を1回再生
+        seSlider.addEventListener('change', () => playClickSe());
+    }
+    if (muteBtn) {
+        muteBtn.addEventListener('click', () => {
+            VolumeManager.muted = !VolumeManager.muted;
+            VolumeManager.updateMuteIcon();
+            VolumeManager.applyBgm();
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initVolumeControls);
+
+// ==================== SE再生関数 ====================
+function playClickSe() {
+    const se = document.getElementById('clickSe');
+    if (se) {
+        se.currentTime = 0;
+        se.volume = VolumeManager.getSeVolume();
+        se.play().catch(err => console.log("SE再生エラー:", err));
+    }
+}
+
+function playCardFlipSe() {
+    const se = document.getElementById('cardFlipSe');
+    if (se) {
+        se.currentTime = 0;
+        se.volume = VolumeManager.getSeVolume();
+        se.play().catch(err => console.log("SE再生エラー:", err));
+    }
+}
+
+function playImpactSe() {
+    const se = document.getElementById('impactSe');
+    if (se) {
+        se.currentTime = 0;
+        // 衝撃音は少し強めにする（SE音量の1.5倍、上限1.0）
+        se.volume = Math.min(VolumeManager.getSeVolume() * 1.5, 1.0);
+        se.play().catch(err => console.log("SE再生エラー:", err));
+    }
+}
 const game = new PokerGame();
 
 // ─── 音量管理と自動再生の統合スクリプト ───
@@ -1006,4 +1172,56 @@ document.addEventListener("DOMContentLoaded", () => {
             document.addEventListener('click', startAudio, { once: true });
         });
     }
+// 画面全体の初回クリックでBGMを再生（ブラウザ対策）
+document.addEventListener('click', () => {
+    // 例：新しいゲームボタン
+document.getElementById('newGameBtn').addEventListener('click', () => {
+    playClickSe(); // ★追加
+    // 既存のゲーム開始処理...
+});
+
+// 例：チェックボタン
+document.getElementById('checkBtn').addEventListener('click', () => {
+    playClickSe(); // ★追加
+    // 既存のチェック処理...
+});
+
+// 例：コールボタン
+document.getElementById('callBtn').addEventListener('click', () => {
+    playClickSe(); // ★追加
+    // 既存のコール処理...
+});
+
+// 例：レイズボタン
+document.getElementById('raiseBtn').addEventListener('click', () => {
+    playClickSe(); // ★追加
+    // 既存のレイズ処理...
+});
+
+// 例：フォールドボタン
+document.getElementById('foldBtn').addEventListener('click', () => {
+    playClickSe(); // ★追加
+    // 既存のフォールド処理...
+});
+
+// 例：レイズの「確定」ボタン（bet-controls内）
+document.getElementById('confirmRaiseBtn').addEventListener('click', () => {
+    playClickSe(); // ★追加
+    // 既存の確定処理...
+});
+
+    
+    const bgm = document.getElementById('bgm');
+    if (bgm && bgm.paused) {
+        bgm.volume = VolumeManager.getBgmVolume();
+        bgm.play().catch(err => console.log("再生エラー:", err));
+    }
+}, { once: true }); // once: true で1回だけ実行されるようにする
+
+
+
+// 「ホームへ戻る」ボタンを押したときの処理
+document.getElementById('homeBtn').addEventListener('click', () => {
+    localStorage.setItem('bugging_cash', game.playerChips);
+    window.location.href = '../home.html'; 
 });
