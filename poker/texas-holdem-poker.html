@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>テキサスポーカー</title>
     <style>
+        :root {
+            /* ワインレッド・カジノテーマ（カイジのブラックジャックと共通） */
+            --wine-dark: #1a0a0c;
+            --wine: #5c1520;
+            --wine-mid: #7a1f2e;
+            --wine-light: #9b2d3f;
+            --wine-glow: #c43d52;
+            --gold: #d4a84b;
+            --gold-light: #f0d078;
+            --gold-dark: #8b6914;
+            --felt: #2d1218;
+            --felt-edge: #4a1a24;
+            --text: #f5e6e8;
+            --text-muted: #c9a8ad;
+            --card-white: #faf8f5;
+            --shadow: rgba(0, 0, 0, 0.55);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,611 +30,772 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: url('haikei.png') no-repeat center center fixed;
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background: radial-gradient(circle at center, #2a0f14 0%, var(--wine-dark) 100%), url('haikei.jpg') no-repeat center center fixed;
             background-size: cover;
-            color: white;
-            height: 100vh;
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 右上の音量コントロール */
+        #volumeControl {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(26, 10, 12, 0.7);
+            border: 1px solid var(--felt-edge);
+            border-radius: 30px;
+            padding: 6px 14px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        #volumeControl .vol-icon {
+            font-size: 1rem;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-muted);
+            transition: color 0.2s;
+            min-width: 1.2em;
+            text-align: center;
+        }
+        #volumeControl .vol-icon:hover { color: var(--gold-light); }
+
+        .vol-group {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 10px;
-            position: relative;
-            overflow: hidden;
-            margin: 0;
+            gap: 1px;
+        }
+        .vol-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
         }
 
-        body::before {
-            content: '';
+        input[type="range"].vol-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 70px;
+            height: 4px;
+            background: rgba(212, 168, 75, 0.25);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        input[type="range"].vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: var(--gold);
+            box-shadow: 0 0 6px rgba(212, 168, 75, 0.6);
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        input[type="range"].vol-slider::-webkit-slider-thumb:hover {
+            background: var(--gold-light);
+            box-shadow: 0 0 10px rgba(212, 168, 75, 0.9);
+        }
+        input[type="range"].vol-slider::-moz-range-thumb {
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: var(--gold);
+            border: none;
+            cursor: pointer;
+        }
+        .vol-sep {
+            width: 1px;
+            height: 28px;
+            background: var(--felt-edge);
+            margin: 0 2px;
+        }
+
+        /* 左上の高級感あるホーム（退室）ボタン */
+        #homeBtn {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3), transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(255, 119, 198, 0.3), transparent 50%),
-                        radial-gradient(circle at 40% 20%, rgba(255, 219, 98, 0.2), transparent 50%);
-            pointer-events: none;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            padding: 8px 18px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--text-muted);
+            background: rgba(26, 10, 12, 0.85);
+            border: 1px solid var(--felt-edge);
+            border-radius: 30px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            letter-spacing: 1px;
+        }
+        #homeBtn:hover {
+            background: var(--wine-mid);
+            color: var(--gold-light);
+            border-color: var(--gold-dark);
+            box-shadow: 0 0 15px rgba(212, 168, 75, 0.35);
+            transform: translateY(-1px);
         }
 
+        /* メインコンテナ */
         .game-container {
-            width: 95%;
-            height: 95vh;
-            max-width: 1200px;
-            margin: 0 auto;
-            background: linear-gradient(135deg, rgba(20, 30, 40, 0.95), rgba(30, 40, 50, 0.95));
-            border-radius: 25px;
-            padding: 20px;
-            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6),
-                        0 0 150px rgba(100, 200, 255, 0.15),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            border: 2px solid rgba(255, 255, 255, 0.15);
             position: relative;
             z-index: 1;
+            width: 100%;
+            max-width: 950px;
+            height: calc(100vh - 30px);
+            max-height: 820px;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            transition: all 0.3s ease;
+            justify-content: space-between;
         }
 
-        .game-container:hover {
-            box-shadow: 0 30px 100px rgba(0, 0, 0, 0.7),
-                        0 0 200px rgba(100, 200, 255, 0.2),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
+        header {
+            text-align: center;
+            flex-shrink: 0;
         }
 
         h1 {
-            text-align: center;
-            font-size: 2em;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: 6px;
+            margin-bottom: 2px;
+            background-image: linear-gradient(135deg, var(--gold-light) 30%, var(--text) 70%, var(--gold) 100%);
             background-clip: text;
-            margin-bottom: 10px;
-            text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-
-        @keyframes glow {
-            from { filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.5)); }
-            to { filter: drop-shadow(0 0 30px rgba(118, 75, 162, 0.8)); }
-        }
-
-        .game-status {
-            text-align: center;
-            font-size: 1em;
-            margin: 5px 0;
-            padding: 8px;
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(139, 195, 74, 0.2));
-            border-radius: 10px;
-            border: 1px solid rgba(76, 175, 80, 0.3);
-            color: #a5d6a7;
-            font-weight: 500;
-            backdrop-filter: blur(5px);
-        }
-
-        .cpu-raise-status {
-            font-size: 0.9em;
-            margin: 5px 0;
-            padding: 8px;
-            background: linear-gradient(135deg, rgba(244, 67, 54, 0.3), rgba(239, 83, 80, 0.3));
-            border-radius: 10px;
-            border: 1px solid rgba(244, 67, 54, 0.5);
-            color: #ffcdd2;
-            font-weight: 600;
-            backdrop-filter: blur(5px);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 0.8; }
-            50% { opacity: 1; }
-            100% { opacity: 0.8; }
-        }
-
-        .bet-status {
-            text-align: center;
-            font-size: 1.2em;
-            margin: 8px 0;
-            color: #87ceeb;
-            font-weight: 600;
-            text-shadow: 0 0 15px rgba(135, 206, 235, 0.5);
-        }
-
-        .bet-status span {
-            background: linear-gradient(135deg, #87ceeb, #4682b4);
             -webkit-background-clip: text;
+            color: transparent;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
         }
 
-        .players-container {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 0 auto 10px;
-            width: 90%;
-            max-width: 800px;
-        }
-
-        .main-game-area {
-            flex: 1;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 0;
-        }
-
-        .table-area {
-            background: radial-gradient(ellipse at center, #2e7d32, #1b5e20);
+        .pot-container {
+            background: rgba(26, 10, 12, 0.7);
+            border: 1px solid rgba(212, 168, 75, 0.4);
             border-radius: 20px;
-            padding: 20px;
-            border: 3px solid #4caf50;
-            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.3),
-                        0 10px 30px rgba(76, 175, 80, 0.3);
-            position: relative;
-            overflow: hidden;
-            width: 90%;
-            max-width: 800px;
-            height: 300px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            padding: 4px 20px;
+            display: inline-flex;
             align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         }
 
-        .table-area::before {
+        .pot-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .pot-amount {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--gold-light);
+            text-shadow: 0 0 8px rgba(212, 168, 75, 0.4);
+        }
+
+        /* 楕円のテーブル */
+        .table-area {
+            flex: 1;
+            background: radial-gradient(ellipse at center, var(--felt) 0%, #1f0c10 100%);
+            border: 6px solid var(--felt-edge);
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.8), 0 8px 25px rgba(0,0,0,0.5);
+            border-radius: 100px;
+            margin: 12px 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px 30px;
+            position: relative;
+            min-height: 380px;
+        }
+
+        .table-area::after {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
-        }
-
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .pot-info {
-            text-align: center;
-            font-size: 1.5em;
-            margin: 10px 0;
-            color: #ffd700;
-            font-weight: bold;
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
-            position: relative;
-            z-index: 1;
-        }
-
-        .pot-info span {
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .bet-status {
-            text-align: center;
-            font-size: 1.2em;
-            margin: 8px 0;
-            color: #87ceeb;
-            font-weight: 600;
-            text-shadow: 0 0 15px rgba(135, 206, 235, 0.5);
-        }
-
-        .bet-status span {
-            background: linear-gradient(135deg, #87ceeb, #4682b4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .community-cards {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin: 15px 0;
-            position: relative;
-            z-index: 1;
-        }
-
-        .card {
-            width: 60px;
-            height: 85px;
-            background: linear-gradient(135deg, #ffffff, #f5f5f5);
-            border: 2px solid #ddd;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            font-weight: bold;
-            position: relative;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3),
-                        0 0 0 1px rgba(255, 255, 255, 0.1);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-style: preserve-3d;
-        }
-
-        .card:hover {
-            transform: translateY(-5px) rotateY(5deg);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4),
-                        0 0 20px rgba(100, 200, 255, 0.3);
-        }
-
-        .card.back {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: white;
-            border: 2px solid #4169e1;
-            box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4);
-        }
-
-        .card.back::after {
-            content: '♠';
-            position: absolute;
-            font-size: 30px;
-            opacity: 0.3;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.6; }
-        }
-
-        .card.hearts, .card.diamonds {
-            color: #e74c3c;
-        }
-
-        .card.clubs, .card.spades {
-            color: #2c3e50;
-        }
-
-        .suit {
-            font-size: 25px;
-            margin-bottom: 4px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .rank {
-            font-size: 22px;
-            font-weight: bold;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            top: 8px; left: 8px; right: 8px; bottom: 8px;
+            border: 1px solid rgba(212, 168, 75, 0.12);
+            border-radius: 92px;
+            pointer-events: none;
         }
 
         .player-area {
-            background: linear-gradient(135deg, rgba(30, 40, 50, 0.9), rgba(40, 50, 60, 0.9));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+            padding: 4px;
             border-radius: 15px;
-            padding: 15px;
-            border: 2px solid rgba(100, 200, 255, 0.3);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
             transition: all 0.3s ease;
-            flex: 1;
-        }
-
-        .player-area:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4),
-                        0 0 20px rgba(100, 200, 255, 0.2);
         }
 
         .player-info {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin: 8px 0;
-            padding: 8px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-        }
-
-        .player-info span:first-child {
-            font-size: 1.2em;
-            font-weight: 600;
-            color: #64b5f6;
+            gap: 10px;
+            margin-bottom: 6px;
+            background: rgba(26, 10, 12, 0.6);
+            padding: 2px 14px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(212, 168, 75, 0.1);
         }
 
         .chips {
-            color: #ffd700;
+            color: var(--gold-light);
             font-weight: bold;
-            font-size: 1.1em;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
 
         .player-cards {
             display: flex;
-            justify-content: center;
             gap: 12px;
-            margin: 10px 0;
+            justify-content: center;
+        }
+
+        /* リアル・モダンカードデザイン */
+        .card {
+            width: 68px;
+            height: 98px;
+            background: #fdfdfd;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 5px 6px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #dddddd;
+            transition: transform 0.2s ease;
+        }
+
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 3px; left: 3px; right: 3px; bottom: 3px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        .card.hearts, .card.diamonds { color: #cf2a2a !important; }
+        .card.clubs, .card.spades { color: #242426 !important; }
+
+        .card .suit {
+            font-size: 1.1rem;
+            line-height: 1;
+            font-weight: 900;
+        }
+        
+        .card .rank {
+            text-align: right;
+            font-size: 1.1rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .card::before {
+            position: absolute;
+            top: 52%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.8rem;
+            opacity: 0.08;
+            font-weight: normal;
+            pointer-events: none;
+        }
+        .card.hearts::before { content: '♥'; }
+        .card.diamonds::before { content: '♦'; }
+        .card.clubs::before { content: '♣'; }
+        .card.spades::before { content: '♠'; }
+
+        /* 裏向きカード */
+        .card.back {
+            background: linear-gradient(135deg, var(--wine-mid) 0%, var(--wine-glow) 50%, var(--wine-dark) 100%) !important;
+            border: 2px solid var(--gold);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            color: transparent !important;
+        }
+        .card.back::after {
+            content: '';
+            position: absolute;
+            top: 4px; left: 4px; right: 4px; bottom: 4px;
+            border: 1px solid rgba(212, 168, 75, 0.25);
+            background-image: radial-gradient(rgba(212,168,75,0.18) 1px, transparent 0);
+            background-size: 6px 6px;
+            border-radius: 3px;
+        }
+        .card.back::before {
+            content: '👑';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.4rem;
+            opacity: 0.7;
+            z-index: 2;
         }
 
         .hand-rank {
-            text-align: center;
-            font-size: 1.1em;
-            color: #ffd700;
-            margin: 10px 0;
-            font-weight: bold;
-            padding: 8px;
-            background: rgba(255, 215, 0, 0.1);
-            border-radius: 8px;
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+            margin-top: 4px;
+            font-size: 0.8rem;
+            background: rgba(196, 61, 82, 0.15);
+            border: 1px solid rgba(196, 61, 82, 0.3);
+            padding: 1px 12px;
+            border-radius: 10px;
+            min-height: 20px;
+            color: var(--gold-light);
         }
 
+        /* --- 前からある他のCSSルール --- */
+
+        /* コミュニティカード */
+        .community-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .community-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .community-cards {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            min-height: 114px;
+            background: rgba(0,0,0,0.25);
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(212, 168, 75, 0.06);
+            min-width: 400px;
+            align-items: center;
+        }
+
+        /* ♣♦♥♠ 操作ボタンエリア（重厚3D＆ネオングロウデザイン） ♠♥♦♣ */
         .controls {
             display: flex;
+            gap: 15px;
             justify-content: center;
-            gap: 10px;
-            margin: 15px 0;
             flex-wrap: wrap;
+            flex-shrink: 0;
+            padding: 5px 0;
         }
 
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            padding: 12px 28px;
+            font-size: 0.95rem;
+            font-weight: 800;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
+            border-radius: 30px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+            letter-spacing: 1.5px;
             position: relative;
-            overflow: hidden;
+            transition: all 0.1s ease;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
         }
 
-        button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        button:hover::before {
-            left: 100%;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            background: linear-gradient(135deg, #424242, #616161);
-            cursor: not-allowed;
-            box-shadow: none;
-            opacity: 0.6;
-        }
-
-        button:disabled::before {
-            display: none;
-        }
-
+        /* ［新しいゲーム］高貴なゴールド＆ダークゴールド */
         #newGameBtn {
-            background: linear-gradient(135deg, #4caf50, #8bc34a);
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-dark) 100%);
+            color: var(--wine-dark);
+            text-shadow: 0 1px 2px rgba(255,255,255,0.4);
+            box-shadow: 0 6px 0 #6b4c00, 0 8px 20px rgba(0,0,0,0.5);
+        }
+        #newGameBtn:not(:disabled):hover {
+            background: linear-gradient(180deg, #fbe6a8 0%, var(--gold) 100%);
+            box-shadow: 0 6px 0 #6b4c00, 0 8px 25px rgba(212, 168, 75, 0.4);
         }
 
-        #newGameBtn:hover {
-            background: linear-gradient(135deg, #8bc34a, #4caf50);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.6);
+        /* ［チェック / コール / レイズ］ワインレッドのカジノチップ */
+        #checkBtn, #callBtn, #raiseBtn {
+            background: linear-gradient(180deg, var(--wine-glow) 0%, var(--wine) 100%);
+            box-shadow: 0 6px 0 var(--wine-dark), 0 8px 20px rgba(0,0,0,0.5);
+        }
+        #checkBtn:not(:disabled):hover, #callBtn:not(:disabled):hover, #raiseBtn:not(:disabled):hover {
+            background: linear-gradient(180deg, var(--wine-light) 0%, var(--wine-glow) 100%);
+            box-shadow: 0 6px 0 var(--wine-dark), 0 8px 25px rgba(196, 61, 82, 0.4);
         }
 
+        /* ［フォールド］鉄のようなチャコールプレステージグレー */
         #foldBtn {
-            background: linear-gradient(135deg, #f44336, #e91e63);
-            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+            background: linear-gradient(180deg, #55555c 0%, #2b2b2e 100%);
+            box-shadow: 0 6px 0 #18181a, 0 8px 20px rgba(0,0,0,0.5);
+        }
+        #foldBtn:not(:disabled):hover {
+            background: linear-gradient(180deg, #696973 0%, #3d3d42 100%);
+            box-shadow: 0 6px 0 #18181a, 0 8px 25px rgba(100,100,100,0.3);
         }
 
-        #foldBtn:hover {
-            background: linear-gradient(135deg, #e91e63, #f44336);
-            box-shadow: 0 8px 25px rgba(244, 67, 54, 0.6);
+        /* 全ボタン共通：クリックした時のリアルな沈み込み演出 */
+        button:not(:disabled):active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #111, 0 4px 10px rgba(0,0,0,0.6) !important;
         }
 
+        /* 無効化（disabled）時のプラスチックのようなマット加工 */
+        button:disabled {
+            background: linear-gradient(180deg, #2a2a2a 0%, #1c1c1c 100%) !important;
+            color: #555555 !important;
+            border: none !important;
+            box-shadow: 0 2px 0 #111, 0 4px 8px rgba(0,0,0,0.2) !important;
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: translateY(4px) !important; /* 最初から押し込まれた状態にする */
+            text-shadow: none !important;
+        }
+
+        /* レイズ調整エリア */
         .bet-controls {
             display: flex;
             align-items: center;
-            gap: 10px;
             justify-content: center;
-            margin: 10px 0;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .bet-input {
-            padding: 8px;
-            border-radius: 8px;
-            border: 2px solid rgba(100, 200, 255, 0.3);
-            font-size: 14px;
-            width: 80px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            transition: all 0.3s ease;
-        }
-
-        .bet-input:focus {
-            outline: none;
-            border-color: rgba(100, 200, 255, 0.6);
-            box-shadow: 0 0 15px rgba(100, 200, 255, 0.3);
-            background: rgba(255, 255, 255, 0.15);
+            gap: 10px;
+            background: rgba(26, 10, 12, 0.9);
+            padding: 8px 16px;
+            border-radius: 25px;
+            border: 1px solid rgba(212, 168, 75, 0.3);
+            margin: 6px auto 0 auto;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+            z-index: 3;
         }
 
         .bet-adjust-btn {
-            background: linear-gradient(135deg, #4caf50, #8bc34a);
-            color: white;
+            background: var(--wine);
+            padding: 6px 24px;
+            font-size: 0.8rem;
+            border-radius: 12px;
+            color: var(--text);
             border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+        }
+
+        .bet-input {
+            width: 180px;
+            background: var(--wine-dark);
+            border: 1px solid rgba(212, 168, 75, 0.4);
+            border-radius: 6px;
+            color: var(--gold-light);
+            font-size: 1.1rem;
             font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
-            min-width: 40px;
-        }
-
-        .bet-adjust-btn:hover {
-            background: linear-gradient(135deg, #8bc34a, #4caf50);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
-        }
-
-        .bet-adjust-btn:active {
-            transform: translateY(0);
-        }
-
-        #decreaseBetBtn {
-            background: linear-gradient(135deg, #f44336, #e91e63);
-            box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
-        }
-
-        #decreaseBetBtn:hover {
-            background: linear-gradient(135deg, #e91e63, #f44336);
-            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+            text-align: center;
+            padding: 4px;
         }
 
         .bet-confirm-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
+            background: linear-gradient(135deg, var(--wine-glow), var(--wine));
             border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
+            color: var(--text);
+            padding: 6px 16px;
+            border-radius: 12px;
             cursor: pointer;
-            font-size: 14px;
             font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
 
-        .bet-confirm-btn:hover {
-            background: linear-gradient(135deg, #764ba2, #667eea);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .bet-cancel-btn {
-            background: linear-gradient(135deg, #9e9e9e, #757575);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(158, 158, 158, 0.3);
-        }
-
-        .bet-cancel-btn:hover {
-            background: linear-gradient(135deg, #757575, #9e9e9e);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(158, 158, 158, 0.4);
-        }
-
-        .bet-controls span {
-            color: #b0bec5;
+        .game-message {
+            text-align: center;
+            font-size: 1rem;
             font-weight: 500;
+            min-height: 24px;
+            color: var(--gold-light);
+            margin-bottom: 2px;
+            z-index: 2;
         }
 
-        @media (max-width: 768px) {
-            .game-container {
-                padding: 20px;
-            }
-            
-            h1 {
-                font-size: 2em;
-            }
-            
-            .card {
-                width: 60px;
-                height: 85px;
-            }
-            
-            .suit {
-                font-size: 25px;
-            }
-            
-            .rank {
-                font-size: 22px;
-            }
-            
-            button {
-                padding: 12px 20px;
-                font-size: 14px;
-            }
+        #cpuRaiseStatus {
+            background: var(--wine-glow);
+            color: var(--text);
+            padding: 1px 8px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            margin-left: 6px;
+            font-weight: bold;
         }
+
+
+        /* ==================== タイトル画面 ==================== */
+        #titleScreen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at center, var(--wine) 0%, var(--wine-dark) 50%, #0c0507 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .title-card {
+            background: linear-gradient(160deg, var(--wine-mid) 0%, var(--wine-dark) 60%, #220a0e 100%);
+            border: 1.5px solid var(--gold-dark);
+            border-radius: 18px;
+            padding: 48px 52px 40px;
+            width: 420px;
+            max-width: 92vw;
+            box-shadow: 0 0 60px rgba(139,105,20,0.25), 0 24px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(212,168,75,0.1);
+            text-align: center;
+        }
+
+        .title-game-name {
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: 4px;
+            line-height: 1.3;
+            background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 40%, #fff3a0 70%, var(--gold-dark) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .title-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            margin-bottom: 36px;
+        }
+
+        .title-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--wine-mid) 60%, var(--wine-dark) 100%);
+            border: 2.5px solid var(--gold-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.4rem;
+            margin: 0 auto 28px;
+            box-shadow: 0 0 20px rgba(139,105,20,0.35);
+        }
+
+        .title-quote {
+            font-size: 0.88rem;
+            color: var(--gold);
+            letter-spacing: 1px;
+            margin-bottom: 32px;
+            line-height: 1.6;
+            font-style: italic;
+        }
+
+        .title-stats {
+            border-top: 1px solid rgba(139,105,20,0.3);
+            padding-top: 20px;
+            margin-bottom: 28px;
+        }
+
+        .title-stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(139,105,20,0.1);
+        }
+        .title-stat-row:last-child { border-bottom: none; }
+
+        .title-stat-val {
+            font-weight: 800;
+            color: var(--gold-light);
+            font-size: 0.95rem;
+        }
+        .title-stat-val.debt-val { color: #ff6b7a; }
+        .title-stat-val.repaid-val { color: #7dffb8; }
+
+        .title-start-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.05rem;
+            font-weight: 900;
+            letter-spacing: 3px;
+            background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold) 60%, var(--gold-dark) 100%);
+            color: var(--wine-dark);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #6b4c00, 0 8px 20px rgba(0,0,0,0.5);
+            transition: all 0.1s ease;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+        }
+        .title-start-btn:hover {
+            background: linear-gradient(180deg, #fbe6a8 0%, var(--gold) 60%, var(--gold-dark) 100%);
+            box-shadow: 0 5px 0 #6b4c00, 0 8px 28px rgba(212,168,75,0.35);
+        }
+        .title-start-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #6b4c00, 0 4px 10px rgba(0,0,0,0.5) !important;
+        }
+
+        /* ===================================================
+        【文字版】オールインの時に四つ隅をざわざわさせるCSS
+        =================================================== */
+        .zawazawa-text {
+            position: fixed;
+            font-family: 'Georgia', 'Hiragino Mincho ProN', serif; /* 不気味さを出すために明朝体っぽく */
+            font-size: 5rem;        /* 文字の大きさ */
+            font-weight: bold;
+            color: var(--wine-glow);  /* 血のような赤色（ワインレッドテーマに統一） */
+            text-shadow: 0 0 10px rgba(0,0,0,0.8); /* 文字の後ろに黒い影を入れて見やすく */
+            line-height: 1.2;
+            opacity: 0;               /* 普段は透明 */
+            pointer-events: none;     /* クリックの邪魔をしない */
+            transition: opacity 1s ease-in-out;
+            z-index: 9999;            /* 最前面に表示 */
+        }
+
+        /* 四つ隅の位置合わせ */
+        .zawa-top-left     { top: 40px; left: 40px; }
+        .zawa-top-right    { top: 40px; right: 40px; } 
+        .zawa-bottom-left  { bottom: 40px; left: 40px; }
+        .zawa-bottom-right { bottom: 40px; right: 40px; }
+
+        /* ざわざわと不気味に震えるアニメーション */
+        @keyframes zawaVibration {
+            0%   { transform: translate(0, 0) scale(1); }
+            20%  { transform: translate(-2px, 2px) scale(1.03); }
+            40%  { transform: translate(1px, -1px) scale(0.98); }
+            60%  { transform: translate(-1px, -2px) scale(1.05); }
+            80%  { transform: translate(2px, 1px) scale(0.97); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* オールイン状態（bodyに all-in-active クラスがついた時）にうっすら表示して震わせる */
+        body.all-in-active .zawazawa-text {
+            opacity: 0.5; /* 透過度（0.5 = 半透明。もっと薄くしたければ 0.3 とかにしてください） */
+            animation: zawaVibration 0.5s infinite linear; /* 高速でガタガタ震えます */
+        }
+
+        /* 音量バーを右上に固定する設定 */
+        .volume-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000; /* 他の要素より手前に表示 */
+        }
+
+        #volume-control-pane {
+            background: rgba(0, 0, 0, 0.7); /* 少し濃い背景で視認性アップ */
+            padding: 8px 12px;
+            border-radius: 20px; /* 角を丸く */
+            color: #fff;
+            font-size: 14px;
+        }
+
+        #global-volume-slider {
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        </style>
+    </head>
+    <body>
+    
+    <button id="homeBtn" onclick="location.href='../home/home.html';">← ホームへ戻る</button>
+
+    <!-- 💡 右上に固定するためのコンテナ -->
+    <div class="volume-container">
+        <div id="volume-control-pane">
+            <span id="vol-icon">音量</span>
+            <input type="range" id="global-volume-slider" min="0" max="1" step="0.05" value="0.2">
+            <span id="global-volume-val">20%</span>
     </style>
 </head>
 <body>
-    <div class="game-container">
-        <h1>テキサスポーカー</h1>
-        
-        <div class="game-status" id="gameStatus">新しいゲームを開始してください</div>
-        
-        <div class="main-game-area">
-            <div class="table-area">
-                <div class="pot-info">
-                    ポット: <span id="potAmount">0</span> チップ
+    <!-- ========== タイトル画面 ========== -->
+    <div id="titleScreen">
+        <div class="title-card">
+            <div class="title-game-name">TEXAS<br>HOLD'EM</div>
+            <div class="title-subtitle">―― 勝てば天国、負ければ地獄。。。 ――</div>
+            <div class="title-avatar">🂡</div>
+            <div class="title-quote">「クックックッ。<br>もう後戻りはできないよ。」</div>
+            <div class="title-stats">
+                <div class="title-stat-row">
+                    <span>手持ち</span>
+                    <span class="title-stat-val" id="titleChips">―</span>
                 </div>
-                
-                <div class="bet-status" id="betStatus">
-                    現在のベット: <span id="currentBetDisplay">0</span> チップ
+                <div class="title-stat-row">
+                    <span>借金残高</span>
+                    <span class="title-stat-val debt-val" id="titleDebt">―</span>
                 </div>
-                
-                <div class="cpu-raise-status" id="cpuRaiseStatus" style="display: none;">
-                    CPUが <span id="cpuRaiseAmount">0</span> チップレイズしました
-                </div>
-                
-                <div class="community-cards" id="communityCards">
-                    <!-- コミュニティカードがここに表示される -->
+                <div class="title-stat-row">
+                    <span>返済累計</span>
+                    <span class="title-stat-val repaid-val" id="titleRepaid">―</span>
                 </div>
             </div>
+            <button class="title-start-btn" id="titleStartBtn">ゲーム開始</button>
         </div>
+    </div>
+
+    <audio id="bgm" src="casino 2.mp3" loop></audio>
+    <button id="homeBtn">← ホームへ戻る</button>
+
+    <!-- 右上 音量コントロール -->
+    <div id="volumeControl">
+        <span class="vol-icon" id="masterMuteBtn" title="全体ミュート">🔊</span>
+        <div class="vol-sep"></div>
+        <div class="vol-group">
+            <span class="vol-label">BGM</span>
+            <input type="range" class="vol-slider" id="bgmVolume" min="0" max="100" value="20">
+        </div>
+        <div class="vol-group">
+            <span class="vol-label">SE</span>
+            <input type="range" class="vol-slider" id="seVolume" min="0" max="100" value="50">
+        </div>
+    </div>
+
+    <div class="game-container">
+        <header>
+            <h1>TEXAS HOLD'EM</h1>
+            <div class="pot-container">
+                <span class="pot-label">TOTAL POT</span>
+                <div class="pot-amount"><span id="potAmount">0</span>ペリカ</div>
+            </div>
+        </header>
         
-        <div class="players-container">
-            <div class="player-area">
+        <div class="game-message" id="gameStatus">新しいゲームを始めてください</div>
+        
+        <div class="table-area">
+            <div class="player-area" id="computerSection">
                 <div class="player-info">
-                    <span>Player</span>
-                    <span class="chips">チップ: <span id="playerChips">1000</span></span>
+                    <span>ハンチョウ</span>
+    <span id="computerChips" style="display: none;"></span>                    <span id="cpuRaiseStatus" style="display: none;">レイズ: <span id="cpuRaiseAmount">0</span></span>
                 </div>
-                <div class="player-cards" id="playerCards">
-                    <!-- プレイヤーのカード -->
-                </div>
-                <div class="hand-rank" id="playerHandRank"></div>
+                <div class="player-cards" id="computerCards"></div>
+                <div class="hand-rank" id="computerHandRank"></div>
             </div>
             
-            <div class="player-area">
+            <div class="community-section">
+                <div class="community-label">Community Cards</div>
+                <div class="community-cards" id="communityCards"></div>
+            </div>
+            
+            <div class="player-area" id="playerSection">
                 <div class="player-info">
-                    <span>CPU</span>
-                    <span class="chips">チップ: <span id="computerChips">1000</span></span>
+                    <span>YOU</span>
+                    <span class="chips"><span id="playerChips">1000</span>ペリカ</span>
                 </div>
-                <div class="player-cards" id="computerCards">
-                    <!-- コンピューターのカード -->
-                </div>
-                <div class="hand-rank" id="computerHandRank"></div>
+                <div class="player-cards" id="playerCards"></div>
+                <div class="hand-rank" id="playerHandRank"></div>
             </div>
         </div>
         
@@ -629,15 +808,109 @@
         </div>
         
         <div class="bet-controls" id="betControls" style="display: none;">
-            <button id="decreaseBetBtn" class="bet-adjust-btn">−10</button>
+            <button id="decreaseBetBtn" class="bet-adjust-btn">−1000万ペリカ</button>
             <input type="number" id="betAmount" class="bet-input" min="10" step="10" value="10">
-            <button id="increaseBetBtn" class="bet-adjust-btn">+10</button>
-            <button id="confirmRaiseBtn" class="bet-confirm-btn">レイズ確定</button>
-            <button id="cancelRaiseBtn" class="bet-cancel-btn">キャンセル</button>
+            <button id="increaseBetBtn" class="bet-adjust-btn">+1000万ペリカ</button>
+            <button id="confirmRaiseBtn" class="bet-confirm-btn">確定</button>
+            <button id="cancelRaiseBtn" class="bet-adjust-btn" style="background: #111;">×</button>
         </div>
     </div>
 
+
+    <audio id="clickSe" src="決定ボタンを押す50.mp3"></audio>
+    <audio id="cardFlipSe" src="カードをめくる.mp3"></audio>
+    <audio id="impactSe" src="winner.mp3"></audio>
+    <audio id="zawazawaBgm" src="zawazawa_bgm.mp3" loop></audio>
+
+    <div class="zawazawa-text zawa-top-left">ざわ…<br>　　ざわ…</div>
+    <div class="zawazawa-text zawa-top-right">　　　ざわ… <br>ざわ…</div>
+    <div class="zawazawa-text zawa-bottom-left">　　ざわ…<br>ざわ…</div>
+    <div class="zawazawa-text zawa-bottom-right"> ざわ…<br>　　ざわ…</div>
+    
     <script src="handEvaluator.js"></script>
-<script src="poker.js"></script>
+    <script src="poker.js"></script>
+    <script>
+    // ==================== 借金・返済システム ====================
+    const INITIAL_DEBT = 24000000000; // 借金返済目標：240億ペリカ
+
+    const DebtManager = {
+        getDebt()   { return parseInt(localStorage.getItem('bugging_debt'))   ?? INITIAL_DEBT; },
+        getRepaid() { return parseInt(localStorage.getItem('bugging_repaid')) || 0; },
+        getChips()  { return parseInt(localStorage.getItem('bugging_cash'))   || 10000000; },
+
+        // 借金を初期化（初回のみ）
+        init() {
+            if (localStorage.getItem('bugging_debt') === null) {
+                localStorage.setItem('bugging_debt', INITIAL_DEBT);
+            }
+            if (localStorage.getItem('bugging_repaid') === null) {
+                localStorage.setItem('bugging_repaid', 0);
+            }
+        },
+
+        // 現在のchipsが以前より増えた分を返済に充当する
+        // prevChips: 前回記録した手持ち（セッション開始時点）
+        settle(prevChips) {
+            const nowChips = this.getChips();
+            const gained = nowChips - prevChips;
+            if (gained <= 0) return; // 増えていなければ返済なし
+            let debt = this.getDebt();
+            let repaid = this.getRepaid();
+            const payment = Math.min(gained, debt);
+            debt   = Math.max(0, debt - payment);
+            repaid += payment;
+            localStorage.setItem('bugging_debt',   debt);
+            localStorage.setItem('bugging_repaid', repaid);
+            this.updateHud();
+        },
+
+        // タイトル画面の数値を更新
+        updateHud() {}
+    };
+
+    // 初期化
+    DebtManager.init();
+
+    // セッション開始時の手持ちを記録（返済計算の基準）
+    const sessionStartChips = DebtManager.getChips();
+
+    // ==================== タイトル画面 ====================
+    (function() {
+        const titleScreen  = document.getElementById('titleScreen');
+        const titleStartBtn = document.getElementById('titleStartBtn');
+
+        function fmt(v) { return Number(v).toLocaleString('ja-JP') + ' ペリカ'; }
+
+        function updateTitleStats() {
+            const chips  = DebtManager.getChips(); // 手持ち（チップ）
+            
+            // 【修正】返済累計 ＝ 手持ち
+            const repaid = chips;
+            
+            // 【修正】借金残高 ＝ 240億(INITIAL_DEBT) − 手持ち
+            const debt   = Math.max(0, INITIAL_DEBT - chips);
+            
+            // 表示用にlocalStorageを最新化
+            localStorage.setItem('bugging_debt', debt);
+            
+            document.getElementById('titleChips').textContent  = fmt(chips);
+            document.getElementById('titleDebt').textContent   = fmt(debt);
+            document.getElementById('titleRepaid').textContent = fmt(repaid);
+        }
+
+        updateTitleStats();
+
+        titleStartBtn.addEventListener('click', function() {
+            titleScreen.style.transition = 'opacity 0.5s ease';
+            titleScreen.style.opacity = '0';
+            setTimeout(function() {
+                titleScreen.style.display = 'none';
+                // BGM再生
+                var bgm = document.getElementById('bgm');
+                if (bgm) bgm.play().catch(function(){});
+            }, 500);
+        });
+    })();
+    </script>
 </body>
 </html>
