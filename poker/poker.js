@@ -850,36 +850,27 @@ class PokerGame {
         const cardDiv = document.createElement('div');
         
         if (!isHidden) {
-            // 記号からクラス名（英語）へ変換する辞書
-            const suitMap = { '♥': 'hearts', '♦': 'diamonds', '♣': 'clubs', '♠': 'spades' };
-            const suitSymbol = card.suit; // ログより記号が入っていることが判明
-            const suitClass = suitMap[suitSymbol] || 'spades'; // 記号がなければデフォルトでスペード
-
+            let suitClass = '';
+            switch(card.suit) {
+                case '♥': suitClass = 'hearts'; break;
+                case '♦': suitClass = 'diamonds'; break;
+                case '♣': suitClass = 'clubs'; break;
+                case '♠': suitClass = 'spades'; break;
+                default: suitClass = '';
+            }
             cardDiv.className = `card ${suitClass}`;
             
-            // rankが文字列の "J" などでも対応できるようにする
-            const rankDisplay = card.rank;
-            
-            cardDiv.innerHTML = `<div class="suit">${suitSymbol}</div><div class="rank">${rankDisplay}</div>`;
-
-            // 音再生
-            setTimeout(() => {
-                const flipSe = document.getElementById('cardFlipSe');
-                if (flipSe) {
-                    flipSe.currentTime = 0;
-                    flipSe.play().catch(e => console.log("SE再生エラー:", e));
-                }
-            }, 50);
-            
+            cardDiv.innerHTML = `
+                <div class="suit">${card.suit}</div>
+                <div class="rank">${card.rank}</div>
+            `;
         } else {
             cardDiv.className = 'card back';
-            cardDiv.textContent = '?';
+            cardDiv.innerHTML = '?';
         }
         
         return cardDiv;
     }
-    
-    
 
     endRound(winner) {
         document.body.classList.remove('all-in-active');
@@ -921,7 +912,7 @@ class PokerGame {
                 
                 // 1.5秒だけ破産メッセージを見せてからホームへ戻る
                 setTimeout(() => {
-                    window.location.href = '../home.html';
+                    window.location.href = '../home/home.html';
                 }, 1500);
                 return; // ここで処理を終了し、下の「新しいゲーム」ボタン復活などはさせない
             }
@@ -930,7 +921,7 @@ class PokerGame {
                 this.updateGameStatus('240億ペリカ達成…！ホームに戻ります。');
                 
                 setTimeout(() => {
-                    window.location.href = '../home.html';
+                    window.location.href = '../home/home.html';
                 }, 1500);
 
                 return; // 以降の処理を中断
@@ -1142,36 +1133,6 @@ function playImpactSe() {
 }
 const game = new PokerGame();
 
-// ─── 音量管理と自動再生の統合スクリプト ───
-document.addEventListener("DOMContentLoaded", () => {
-    const volSlider = document.getElementById("global-volume-slider");
-    const volValText = document.getElementById("global-volume-val");
-    const bgm = document.getElementById('bgm');
-
-    // 音量バーの動作
-    if (volSlider && volValText) {
-        volSlider.oninput = (e) => {
-            const volume = parseFloat(e.target.value);
-            // BGMと効果音を一括制御するなら以下のように追加
-            const allAudios = [bgm, document.getElementById('clickSe'), document.getElementById('cardFlipSe'), document.getElementById('impactSe')];
-            allAudios.forEach(audio => { if(audio) audio.volume = volume; });
-            
-            volValText.innerText = Math.round(volume * 100) + "%";
-        };
-    }
-
-    // 自動再生処理
-    if (bgm) {
-        bgm.volume = 0.2;
-        bgm.play().catch(() => {
-            console.log("自動再生ブロック。クリックで開始");
-            const startAudio = () => {
-                bgm.play();
-                document.removeEventListener('click', startAudio);
-            };
-            document.addEventListener('click', startAudio, { once: true });
-        });
-    }
 // 画面全体の初回クリックでBGMを再生（ブラウザ対策）
 document.addEventListener('click', () => {
     // 例：新しいゲームボタン
@@ -1223,5 +1184,5 @@ document.getElementById('confirmRaiseBtn').addEventListener('click', () => {
 // 「ホームへ戻る」ボタンを押したときの処理
 document.getElementById('homeBtn').addEventListener('click', () => {
     localStorage.setItem('bugging_cash', game.playerChips);
-    window.location.href = '../home.html'; 
+    window.location.href = '../home/home.html'; 
 });
