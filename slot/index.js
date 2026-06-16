@@ -206,31 +206,41 @@ function saveShared() {
     localStorage.setItem(KEY_BET,  bet);
   } catch (e) {}
 }
-//タイトル画面
+// ─── タイトル画面───────────────────────────
 function renderTitle() {
-  document.getElementById('main-content').innerHTML = `
-    <div class="title-screen">
-      <h1 class="game-title">カイジのスロット</h1>
-      <p class="game-sub">運命は自分の手で切り開く——</p>
+   document.getElementById('main-content').innerHTML = `
+    <div id="titleScreen">
+        <div class="title-card">
+            <div class="title-game-name">DEBT BREAKER<br>SLOT</div>
+            <div class="title-subtitle">―― 運命は自分の手で切り開く ――</div>
 
-      <div class="kaiji-face">開</div>
+            <div class="title-avatar">🎰</div>
 
-      <p class="kaiji-line">「退路は断った。ここから先は勝つだけだ」</p>
+            <div class="title-quote">「退路は断った…ここから先は勝つだけだ」</div>
 
-      <div class="title-stats">
-        <div>手持ち：${fmt(cash)}</div>
-        <div>借金残高：${fmt(debt)}</div>
-        <div>返済累計：${fmt(paidDebt)}</div>
-      </div>
+            <div class="title-stats">
+                <div class="title-stat-row">
+                    <span>手持ち</span>
+                    <span class="title-stat-val">${fmt(cash)}</span>
+                </div>
+                <div class="title-stat-row">
+                    <span>借金残高</span>
+                    <span class="title-stat-val debt-val">${fmt(debt)}</span>
+                </div>
+                <div class="title-stat-row">
+                    <span>返済累計</span>
+                    <span class="title-stat-val repaid-val">${fmt(paidDebt)}</span>
+                </div>
+            </div>
 
-      <button class="btn-main start-game-btn" onclick="startGame()">ゲーム開始</button>
-      <button class="btn-main btn-home" onclick="goHome()">← HOME</button>
+            <button class="title-start-btn" id="titleStartBtn">ゲーム開始</button>
+        </div>
     </div>
   `;
-}
 
-function startGame() {
-  renderUI();   // ← これでスロット画面へ遷移
+  document.getElementById("titleStartBtn").onclick = () => {
+    renderUI(); // ← スロット画面へ
+  };
 }
 
 // ─── UI 描画（初回のみフル描画）─────────────────────
