@@ -283,11 +283,11 @@ function renderUI() {
 
     <div class="bet-row">
       <span class="bet-label">BET</span>
-      <button class="btn-small" onclick="changeBet(-1000000)">－100万</button>
-      <button class="btn-small" onclick="changeBet(-500000)">－50万</button>
+      <button class="btn-small" onclick="changeBet(-10000000)">－1000万</button>
+      <button class="btn-small" onclick="changeBet(-100000000)">－1億</button>
       <div class="bet-display" id="disp-bet2">${fmt(bet)}</div>
-      <button class="btn-small" onclick="changeBet(500000)">＋50万</button>
-      <button class="btn-small" onclick="changeBet(1000000)">＋100万</button>
+      <button class="btn-small" onclick="changeBet(10000000)">＋1000万</button>
+      <button class="btn-small" onclick="changeBet(100000000)">＋1億</button>
       <button class="btn-max"   onclick="setBetMax()">MAX</button>
     </div>
 
@@ -483,14 +483,26 @@ function resolveResult() {
   const sb = document.getElementById('btn-start');
   if (sb) sb.disabled = false;
 
+// resolveResult() の最後に追加
+saveShared();
+updateStats();
+
+const sb = document.getElementById('btn-start');
+if (sb) sb.disabled = false;
+
+// ★ 所持金が最低ベット未満なら強制帰還
+if (cash < 10000000) {
+    goHome();
+    return;
+}
 
 }
 
 // ─── BET 操作 ────────────────────────────────────────
 function changeBet(delta) {
   // 💡 最小10万ペリカ、最大は手持ちか1000万ペリカ
-  const maxLimit = Math.min(cash || INIT_CASH, 10000000);
-  bet = Math.max(100000, Math.min(maxLimit, bet + delta));
+  const maxLimit = Math.min(cash || INIT_CASH, 100000000);
+  bet = Math.max(10000000, Math.min(maxLimit, bet + delta));
   // bet = Math.max(100, Math.min(cash || INIT_CASH, bet + delta));
   saveShared();
   updateStats();
@@ -558,8 +570,8 @@ function initSlot() {
   debt     = shared.debt;
   paidDebt = shared.paid;
   // 💡 初期BET額を100万ペリカに設定
-  bet      = parseFloat(localStorage.getItem(KEY_BET) || 1000000);
-  bet      = Math.max(100000, Math.min(cash, bet));
+  bet      = parseFloat(localStorage.getItem(KEY_BET) || 10000000);
+  bet      = Math.max(10000000, Math.min(cash, bet));
   // bet      = parseFloat(localStorage.getItem(KEY_BET) || 100);
   // bet      = Math.max(100, Math.min(cash, bet)); // cashを超えないよう補正
 
