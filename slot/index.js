@@ -483,13 +483,6 @@ function resolveResult() {
   const sb = document.getElementById('btn-start');
   if (sb) sb.disabled = false;
 
-// resolveResult() の最後に追加
-saveShared();
-updateStats();
-
-const sb = document.getElementById('btn-start');
-if (sb) sb.disabled = false;
-
 // ★ 所持金が最低ベット未満なら強制帰還
 if (cash < 10000000) {
     goHome();
