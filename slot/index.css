@@ -333,7 +333,7 @@ body {
   color: var(--wine-dark);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
-.btn-st.btn-start:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(212, 168, 75, 0.5); transform: translateY(-2px); }
+.btn-start:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(212, 168, 75, 0.5); transform: translateY(-2px); }
 .btn-start:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 .btn-home {

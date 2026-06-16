@@ -1,5 +1,5 @@
 /* =====================================================
-   slot.js  —  借金返済スロット
+   index.js  —  借金返済スロット
    localStorage キー（home.html と共有）
      bugging_cash  : 手持ち金額
      bugging_debt  : 借金残高
@@ -205,6 +205,32 @@ function saveShared() {
     localStorage.setItem(KEY_PAID, paidDebt);
     localStorage.setItem(KEY_BET,  bet);
   } catch (e) {}
+}
+//タイトル画面
+function renderTitle() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="title-screen">
+      <h1 class="game-title">カイジのスロット</h1>
+      <p class="game-sub">運命は自分の手で切り開く——</p>
+
+      <div class="kaiji-face">開</div>
+
+      <p class="kaiji-line">「退路は断った。ここから先は勝つだけだ」</p>
+
+      <div class="title-stats">
+        <div>手持ち：${fmt(cash)}</div>
+        <div>借金残高：${fmt(debt)}</div>
+        <div>返済累計：${fmt(paidDebt)}</div>
+      </div>
+
+      <button class="btn-main start-game-btn" onclick="startGame()">ゲーム開始</button>
+      <button class="btn-main btn-home" onclick="goHome()">← HOME</button>
+    </div>
+  `;
+}
+
+function startGame() {
+  renderUI();   // ← これでスロット画面へ遷移
 }
 
 // ─── UI 描画（初回のみフル描画）─────────────────────
@@ -571,6 +597,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// ─── スロットゲーム起動 ───
-if (typeof init === 'function') init();
-else if (typeof initSlot === 'function') initSlot();
+// ─── タイトル画面からスロットゲームへ ───
+document.addEventListener("DOMContentLoaded", () => {
+  initSlot();      // データ読み込み
+  renderTitle();   // ← 最初はタイトル画面
+});
