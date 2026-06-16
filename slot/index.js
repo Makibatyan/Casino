@@ -411,7 +411,7 @@ function snapReel(c) {
 }
 
 const se = {
-  decide: new Audio('slot/決定ボタンを押す.mp3')
+  decide: new Audio('決定ボタンを押す.mp3')
 };
 
 function stopReel(idx) {
