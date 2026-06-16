@@ -1,6 +1,7 @@
 const cardPlaySound = new Audio('card_play.mp3');
 const cardPlaySound2 = new Audio('card_play2.mp3');
 const raiseSound = new Audio('raise_se.mp3');
+const zawaSound = new Audio('zawazawa.wav');
 
 const gameBgm = new Audio('bgm.mp3');
 gameBgm.loop = true;
@@ -10,10 +11,10 @@ const betBgm = new Audio('bet_bgm.mp3');
 betBgm.loop = true;
 betBgm.volume = 0.3;
 
-//  全音声の一元管理用リスト
+//全音声の一元管理用リスト
 const allSounds = [cardPlaySound, cardPlaySound2, raiseSound, gameBgm, betBgm];
 
-//  画面右上の音量スライダーのリアルタイム変更イベント
+//画面右上の音量スライダーのリアルタイム変更イベント
 document.addEventListener("DOMContentLoaded", () => {
     const volSlider = document.getElementById("global-volume-slider");
     const volValText = document.getElementById("global-volume-val");
@@ -238,10 +239,10 @@ function updateField(cards) {
 function updateRevolutionStatus() {
     const statusEl = document.getElementById("revolution-status");
     if (gameState.isElevenBack) {
-        statusEl.innerText = "🔥 11バック中！";
+        statusEl.innerText = "11バック発動中！";
         statusEl.style.color = "#42a5f5";
     } else if (gameState.isRevolution) {
-        statusEl.innerText = "🔥 革命中！強さ関係が逆転しています！";
+        statusEl.innerText = "革命発動中！強さ関係が逆転！";
         statusEl.style.color = "#ff6b6b";
     } else {
         statusEl.innerText = "";
@@ -362,7 +363,7 @@ function initGame() {
     updateRevolutionStatus();
     renderHand();
 
-    // 💰 【ここを調整】破産チェック（最低賭け金が1000万ペリカになったので、未満なら1億にリセット）
+    // 【ここを調整】破産チェック（最低賭け金が1000万ペリカになったので、未満なら1億にリセット）
     if (!gameState.pelika || gameState.pelika < 10000000) {
         alert("破産……！地下強制労働行き……！\n\n（新たな軍資金として、1億ペリカを支給して復活します）");
         gameState.pelika = 100000000; // 初期値を1億ペリカに
@@ -380,10 +381,10 @@ function initGame() {
     const maxBet = gameState.pelika; // 上限は現在の所持金すべて
     const slider = document.getElementById("bet-slider");
     
-    slider.min = "10000000";         // 💡 最低賭け金を 1,000万 ペリカに設定
-    slider.max = String(maxBet);    // 💡 上限は自分の所持金全額
-    slider.step = "10000000";       // 💡 つまみを動かしたときの単位を 1,000万 ペリカ刻みに変更
-    slider.value = "10000000";      // 💡 初期値を 1,000万 ペリカに設定
+    slider.min = "10000000";         //  最低賭け金を 1,000万 ペリカに設定
+    slider.max = String(maxBet);    //  上限は自分の所持金全額
+    slider.step = "10000000";       // つまみを動かしたときの単位を 1,000万 ペリカ刻みに変更
+    slider.value = "10000000";      // 初期値を 1,000万 ペリカに設定
     
     document.getElementById("bet-slider-val").innerText = "10,000,000"; 
     document.getElementById("current-bet-display").innerText = "10,000,000";
@@ -430,17 +431,23 @@ function handleSpecialCards(cards, isPlayer = true) {
 
     // 10捨てチェック
     if (mainCard.rank === 10) {
-        gameState.tenDiscardMode = true;
-        gameState.tenDiscardCount = cards.length;
+    gameState.tenDiscardMode = true;
+    
+    if (isPlayer) {
+        // 出した枚数と、自分の現在の残り手札の「少ない方」を捨てる目標枚数にする
+        gameState.tenDiscardCount = Math.min(cards.length, gameState.playerHand.length);
         gameState.tenDiscardSelected = [];
-        if (isPlayer) {
-            showMessage(`10捨て発動！${cards.length}枚手札から捨ててください`);
-            renderTenDiscardUI();
-        } else {
-            setTimeout(cpuTenDiscard, 800);
-        }
-        return true; // 10捨て発動
+        
+        showMessage(`10捨て発動！手札から ${gameState.tenDiscardCount} 枚捨ててください`);
+        renderTenDiscardUI();
+    } else {
+        // CPU側も残り手札の枚数を超えないように制限
+        gameState.tenDiscardCount = Math.min(cards.length, gameState.cpuHand.length);
+        gameState.tenDiscardSelected = [];
+        setTimeout(cpuTenDiscard, 800);
     }
+    return true; 
+}
 
     // 8切りチェック
     if (mainCard.rank === 8) {
@@ -523,7 +530,7 @@ function playCards(cards, isPlayer = true) {
         gameState.playerHand = gameState.playerHand.filter((_, i) => !gameState.selectedCards.includes(i));
         gameState.selectedCards = [];
         renderHand();
-        // 💡 特殊勝利フラグが立っている、または手札が0枚なら勝敗チェックへ
+        // 特殊勝利フラグが立っている、または手札が0枚なら勝敗チェックへ
         if (gameState.superRevolution || gameState.lucky7 || gameState.playerHand.length === 0) {
             checkWin("Player");
             return;
@@ -700,7 +707,7 @@ function cpuTurn() {
 }
 
 function checkWin(playerName) {
-    if (gameState.playerHand.length === 0) {
+    if (gameState.playerHand.length === 0 || ((gameState.superRevolution || gameState.lucky7) && playerName === "Player")) {
         setGameOver();
         
         let multiplier = 2;
@@ -761,12 +768,22 @@ function checkWin(playerName) {
         showResult(`💻 ${lossReason}\n【-${lossAmount.toLocaleString()} ペリカ】猛省せよ……！`);
         if (gameState.pelika < 10000000) {
             setTimeout(() => {
-                alert("破産……！！\n\nくそっっっっっっっっっっっ！\nなんでだよぉぉぉぉぉ！！！！！！");
                 
                 // 次回のためにペリカを初期の1億に戻してセーブしておく
                 localStorage.setItem('bugging_cash', 100000000);
                 
-                // 強制的に退出（ホームへ戻る）
+                // 強制的に退出
+                window.location.href = '../home/home.html';
+            }, 1500); 
+            return; 
+        }
+        if (gameState.pelika >= 24000000000) {
+            setTimeout(() => {
+
+                // 次回のためにペリカを初期の1億に戻してセーブしておく
+                localStorage.setItem('bugging_cash', 100000000);
+                
+                // 強制的に退出
                 window.location.href = '../home/home.html';
             }, 1500); 
             return; 
@@ -803,7 +820,7 @@ document.getElementById("bet-slider").oninput = (e) => {
     document.getElementById("bet-slider-val").innerText = val.toLocaleString();
 };
 
-// 「勝負開始（レイズ…！）」ボタンを押したときの処理
+// 「ゲーム開始」ボタンを押したときの処理
 document.getElementById("start-with-bet-btn").onclick = () => {
     const selectedBet = parseInt(document.getElementById("bet-slider").value);
 
@@ -819,7 +836,7 @@ document.getElementById("start-with-bet-btn").onclick = () => {
     // ゲーム用ボタンを有効化して勝負スタート！
     document.getElementById("play-btn").disabled = false;
     document.getElementById("pass-btn").disabled = false;
-    showMessage("勝負開始……！ざわざわ……");
+    showMessage("ゲーム開始……！ざわざわ……");
 };
 
 if (document.getElementById("bet-slider")) {
@@ -829,7 +846,7 @@ if (document.getElementById("bet-slider")) {
     };
 }
 
-// 💰 「勝負開始（レイズ…！）」ボタンの処理
+// 💰 「ゲーム開始」ボタンの処理
 if (document.getElementById("start-with-bet-btn")) {
     document.getElementById("start-with-bet-btn").onclick = () => {
         const selectedBet = parseInt(document.getElementById("bet-slider").value) || 10000000;
@@ -849,11 +866,22 @@ if (document.getElementById("start-with-bet-btn")) {
         
         document.getElementById("play-btn").disabled = false;
         document.getElementById("pass-btn").disabled = false;
-        showMessage("勝負開始……！ざわざわ……");
+        showMessage("ゲーム開始……！ざわざわ……");
+
+        //スタート画面に「hidden」クラスを付与してフェードアウトさせる
+        const startScreen = document.getElementById("start-screen");
+        if (startScreen) {
+            startScreen.classList.add("hidden");
+            
+            // アニメーション（0.4秒）が終わった後に完全にDOMから非表示(display:none)にする
+            setTimeout(() => {
+                startScreen.style.display = "none";
+            }, 400);
+        }
     };
 }
 
-// 💡 ゲーム終了後に「もう一度」か「退出」かを選ばせるUIを生成する関数
+// ゲーム終了後に「もう一度」か「退出」かを選ばせるUIを生成する関数
 function showEndGameChoices() {
     const controlsDiv = document.getElementById("controls");
     
@@ -891,171 +919,94 @@ function showEndGameChoices() {
         controlsDiv.appendChild(choiceArea);
     }
 }
+//ポーカーの演出に寄せた「ざわざわ」表示関数
 function showZawaZawaEffect(cardCount = 1) {
+
+    const appearanceProbability = 30; 
+
+    // ランダムな数値（0〜99）が設定した確率以上なら、何もせずに処理を終了（非表示）にする
+    if (Math.random() * 100 >= appearanceProbability) {
+        return; 
+    }
+
     const overlay = document.getElementById("zawa-zawa-overlay");
     if (!overlay) return;
 
-    // 出した枚数に応じて基本サイズをブースト（4枚革命なら1.5倍の圧倒的巨体に）
-    const sizeMultiplier = cardCount >= 4 ? 1.5 : (cardCount === 3 ? 1.25 : 1.0);
+    zawaSound.currentTime = 0;
+    zawaSound.play().catch(e => console.log("ざわざわ再生エラー:", e));
     
-    // 各位置のデフォルトのフォントサイズ定義
+    // 出した枚数に応じてフォントサイズをさらにブースト
+    const sizeMultiplier = cardCount >= 4 ? 1.4 : (cardCount === 3 ? 1.2 : 1.0);
+    
     const baseSizes = {
-        "top-left": 7,
-        "top-right": 6.5,
-        "bottom-left": 7.5,
-        "bottom-right": 8.5
+        "zawa-top-left": 4.5,
+        "zawa-top-right": 7.2,
+        "zawa-bottom-left": 8,
+        "zawa-bottom-right": 5.2
     };
 
-    const zawas = overlay.querySelectorAll(".zawa");
+    const zawas = overlay.querySelectorAll(".zawazawa-text");
     zawas.forEach(zawa => {
-        // 枚数が多いほど文字を「ざわ… ざわ…」に増殖
         if (cardCount >= 3) {
-            zawa.innerText = "ざわ… ざわ…";
+            zawa.innerHTML = "ざわ…ざわ…<br>……ざわっ";
         } else {
-            zawa.innerText = "ざわ…";
+            zawa.innerHTML = "ざわ…<br>……ざわ";
         }
 
-        // クラス名から位置を特定して、動的にフォントサイズを巨大化
-        let finalSize = 7;
-        if (zawa.classList.contains("top-left")) finalSize = baseSizes["top-left"] * sizeMultiplier;
-        if (zawa.classList.contains("top-right")) finalSize = baseSizes["top-right"] * sizeMultiplier;
-        if (zawa.classList.contains("bottom-left")) finalSize = baseSizes["bottom-left"] * sizeMultiplier;
-        if (zawa.classList.contains("bottom-right")) finalSize = baseSizes["bottom-right"] * sizeMultiplier;
+        let finalSize = 6.5;
+        if (zawa.classList.contains("zawa-top-left")) finalSize = baseSizes["zawa-top-left"] * sizeMultiplier;
+        if (zawa.classList.contains("zawa-top-right")) finalSize = baseSizes["zawa-top-right"] * sizeMultiplier;
+        if (zawa.classList.contains("zawa-bottom-left")) finalSize = baseSizes["zawa-bottom-left"] * sizeMultiplier;
+        if (zawa.classList.contains("zawa-bottom-right")) finalSize = baseSizes["zawa-bottom-right"] * sizeMultiplier;
         
         zawa.style.fontSize = finalSize + "em";
     });
 
+    // 一旦非表示クラスを消して、表示用のクラスを追加（これでCSSのアニメーションが走ります）
     overlay.classList.remove("zawa-zawa-hidden");
     overlay.classList.add("zawa-zawa-visible");
 
-    // 表示する時間（複数枚のときは少し長めに余韻を残す）
-    const displayTime = cardCount >= 3 ? 1600 : 1200;
+    //CSSのアニメーション時間（3.5秒）に合わせて非表示に戻すタイマーを設定
+    const startFadeOutTime = 3500;
 
     if (window._zawaTimeout) clearTimeout(window._zawaTimeout);
     window._zawaTimeout = setTimeout(() => {
         overlay.classList.remove("zawa-zawa-visible");
         overlay.classList.add("zawa-zawa-hidden");
-    }, displayTime); 
+        zawaSound.pause();
+    }, startFadeOutTime); 
 }
 
+if (document.getElementById('startHomeBtn')) {
+    document.getElementById('startHomeBtn').addEventListener('click', () => {
+        // 現在流れているベット画面のBGMやタイマーを停止
+        betBgm.pause();
+        if (window._msgTimeout) clearTimeout(window._msgTimeout);
+        if (window._msgHideTimeout) clearTimeout(window._msgHideTimeout);
+        
+        // ホーム画面へ遷移
+        window.location.href = '../home/home.html'; 
+    });
+}
 
-// 「ホームへ戻る」ボタンを押したときの処理
-document.getElementById('homeBtn').addEventListener('click', () => {
-    // 1. ゲーム進行中の場合は確認ダイアログを出す
-    if (!gameState.isGameOver) {
-        const leave = confirm(`ゲームの途中ですが、ホーム画面に戻りますか？\n\n※今賭けている${gameState.currentBet.toLocaleString()} ペリカは没収されます`);
-        if (!leave) return; // キャンセルされたら何もしない
-
-        gameState.pelika -= gameState.currentBet;
-        localStorage.setItem('bugging_cash', gameState.pelika);
-    }
-
-    // 2. 裏で動いているメッセージ用タイマー（setTimeout）を安全に停止
+const handleStartHomeClick = () => {
+    // ベット画面のBGMやタイマーを停止
+    betBgm.pause();
     if (window._msgTimeout) clearTimeout(window._msgTimeout);
     if (window._msgHideTimeout) clearTimeout(window._msgHideTimeout);
-
-    // 3. ゲームを強制終了状態にして、これ以上のCPUの処理（10捨てやターン進行）の発生を防ぐ
-    gameState.isGameOver = true;
-
-    // 4. 指定のホーム画面へ遷移
+    
+    // ホーム画面へ遷移
     window.location.href = '../home/home.html'; 
-});
-
-// 💰 ベットスライダーのリアルタイム表示変更
-document.getElementById("bet-slider").oninput = (e) => {
-    const val = parseInt(e.target.value);
-    document.getElementById("bet-slider-val").innerText = val.toLocaleString();
 };
 
-// 💰 「勝負開始（レイズ…！）」ボタンを押したときの処理
-document.getElementById("start-with-bet-btn").onclick = () => {
-    const selectedBet = parseInt(document.getElementById("bet-slider").value);
-
-    raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
-
-    gameState.currentBet = selectedBet;
-    document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString() + " ペリカ";
-    
-    // ベット画面を隠してゲーム画面をアクティブにする
-    document.getElementById("bet-setup-area").style.display = "none";
-    document.getElementById("game-container").style.opacity = "1";
-    
-    // ゲーム用ボタンを有効化して勝負スタート！
-    document.getElementById("play-btn").disabled = false;
-    document.getElementById("pass-btn").disabled = false;
-    showMessage("勝負開始……！ざわざわ……");
-};
-
-if (document.getElementById("bet-slider")) {
-    document.getElementById("bet-slider").oninput = (e) => {
-        const val = parseInt(e.target.value) || 10000000;
-        document.getElementById("bet-slider-val").innerText = val.toLocaleString() + " ペリカ";
-    };
+// 1. 初期スタート画面のホームボタンに紐付け
+if (document.getElementById('startHomeBtnInitial')) {
+    document.getElementById('startHomeBtnInitial').addEventListener('click', handleStartHomeClick);
 }
-
-// 💰 「勝負開始（レイズ…！）」ボタンの処理
-if (document.getElementById("start-with-bet-btn")) {
-    document.getElementById("start-with-bet-btn").onclick = () => {
-        const selectedBet = parseInt(document.getElementById("bet-slider").value) || 10000000;
-        
-        raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
-        
-        gameState.currentBet = selectedBet;
-        document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString();
-        
-        betBgm.pause();
-        betBgm.currentTime = 0;
-
-        gameBgm.play().catch(e => console.error("BGM再生エラー:", e));
-
-        document.getElementById("bet-setup-area").style.display = "none";
-        document.getElementById("game-container").style.opacity = "1";
-        
-        document.getElementById("play-btn").disabled = false;
-        document.getElementById("pass-btn").disabled = false;
-        showMessage("勝負開始……！ざわざわ……");
-    };
+// 2. ベットエリア内にあるホームボタンにも紐付け
+if (document.getElementById('startHomeBtn')) {
+    document.getElementById('startHomeBtn').addEventListener('click', handleStartHomeClick);
 }
-
-// 💡 ゲーム終了後に「もう一度」か「退出」かを選ばせるUIを生成する関数
-function showEndGameChoices() {
-    const controlsDiv = document.getElementById("controls");
-    
-    // 既存の「出す」「パス」ボタンを一旦見えなくする
-    document.getElementById("play-btn").style.display = "none";
-    document.getElementById("pass-btn").style.display = "none";
-    
-    // すでに選択ボタンが作られていなければ作成する
-    if (!document.getElementById("retry-btn")) {
-        const choiceArea = document.createElement("div");
-        choiceArea.id = "end-choices";
-        choiceArea.style.marginTop = "20px";
-        choiceArea.style.display = "flex";
-        choiceArea.style.justify = "center";
-        choiceArea.style.gap = "20px";
-        
-        // 「もう一戦（リロード）」ボタン
-        const retryBtn = document.createElement("button");
-        retryBtn.id = "retry-btn";
-        retryBtn.innerText = "⚡️ もう一戦する（続行）";
-        retryBtn.onclick = () => {
-            location.reload(); // ページをリロードして次のゲームへ
-        };
-        
-        // 「退出する（ホームへ）」ボタン
-        const leaveBtn = document.createElement("button");
-        leaveBtn.id = "leave-btn";
-        leaveBtn.innerText = "🚪 退出する（ホームへ）";
-        leaveBtn.onclick = () => {
-            window.location.href = '../home/home.html'; // ホーム画面へ遷移
-        };
-        
-        choiceArea.appendChild(retryBtn);
-        choiceArea.appendChild(leaveBtn);
-        controlsDiv.appendChild(choiceArea);
-    }
-}
-
 
 //　ゲーム開始 
 initGame();
