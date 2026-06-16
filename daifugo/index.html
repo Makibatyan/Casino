@@ -18,9 +18,17 @@
             
             
             <div class="bet-input-container">
-                <h3 style="color: #ff4500; margin-top: 0;">下のスライダーを動かして賭け金を決定せよ …！</h3>
-                <input type="range" id="bet-slider" min="1000000" max="10000000" step="1000000" value="1000000" style="width: 80%; accent-color: #ff4500;">
-                <div style="font-size: 1.6em; color: #ffd700; margin-top: 10px; font-weight: bold;" id="bet-slider-val">1,000,000 ペリカ</div>
+                <h3 style="color: #ff4500; margin-top: 0;">ざわざわ… 賭け金（レート）を決定せよ …！</h3>
+                
+                <div class="chip-container" style="display: flex; justify-content: center; gap: 10px; margin: 15px 0;">
+                    <button type="button" class="chip-btn" data-value="10000000">1000万</button>
+                    <button type="button" class="chip-btn" data-value="30000000">3000万</button>
+                    <button type="button" class="chip-btn" data-value="50000000">5000万</button>
+                    <button type="button" class="chip-btn" data-value="allin" style="background: linear-gradient(135deg, #ff0055, #8b0000); color: #fff;">全賭け</button>
+                    <button type="button" id="clear-bet-btn" style="background: #444; color: #fff; border: 1px solid #666; border-radius: 8px; padding: 5px 10px; cursor: pointer;">リセット</button>
+                </div>
+
+                <div style="font-size: 1.6em; color: #ffd700; margin-top: 10px; font-weight: bold;" id="bet-slider-val">0 ペリカ</div>
             </div>
             
             <button type="button" id="start-with-bet-btn" class="btn btn-gold">ゲーム開始</button>
@@ -42,17 +50,7 @@
         <div> 所持金: <span id="player-pelika">10,000,000</span> ペリカ</div>
         <div> 現在の賭け金: <span id="current-bet-display">1,000,000</span> ペリカ</div>
     </div>
-
-    <div id="bet-setup-area" style="max-width: 820px; margin: 20px auto; padding: 20px; background: rgba(0,0,0,0.85); border: 2px solid #ff4500; border-radius: 14px; text-align: center;">
-        <h3 style="color: #ff4500; margin-top: 0;">ざわざわ… 賭け金を決定せよ …！</h3>
-        <p style="color: #fff;">ギャンブラーなら、かける金額は決まっている！！！</p>
-        <div style="margin: 20px 0;">
-            <input type="range" id="bet-slider" min="1000000" max="10000000" step="1000000" value="1000000" style="width: 60%; accent-color: #ff4500;">
-            <div style="font-size: 1.8em; color: #ffd700; margin-top: 10px; font-weight: bold;" id="bet-slider-val">1,000,000 ペリカ</div>
-        </div>
-        <button id="start-with-bet-btn" style="padding: 10px 30px; font-size: 1.2em; background: linear-gradient(180deg, #ff4500 0%, #8b0000 100%); color: #fff; border: 2px solid #ffd700; border-radius: 8px; cursor: pointer; font-weight: bold;">ゲーム開始</button>
-        <button id="startHomeBtn" style="display: block; margin: 15px auto 0 auto; padding: 10px 30px; font-size: 1.2em; background: linear-gradient(180deg, #ff4500 0%, #8b0000 100%); color: #fff; border: 2px solid #ffd700; border-radius: 8px; cursor: pointer; font-weight: bold;">ホームへ戻る</button>
-    </div>
+    
     
     
     <div id="game-container">
