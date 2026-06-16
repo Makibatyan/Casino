@@ -417,7 +417,7 @@ function snapReel(c) {
 function stopReel(idx) {
   if (!spinning || stopFlags[idx]) return;
 
-  new Audio('slot/決定ボタンを押す.mp3').play();  // ← これが最強
+  new Audio('決定ボタンを押す.mp3').play();  // ← これが最強
 
   // ★ STOP ボタン効果音
   //playSound('decide');   // ← ここを追加（ファイル名は後で設定）
