@@ -5,11 +5,28 @@
     <title>大富豪</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=RocknRoll+One&family=Yuji+Syuku&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    
+    <div id="start-screen" class="screen">
+        
+
+        <div class="start-card">
+            <h1>大富豪</h1> <p class="kaiji-quote">「勝たなきゃゴミだ…！勝つことが全てだ…！」</p>
+            <p class="desc">ペリカを賭けた究極の心理戦。生き残りをかけた大富豪が今、始まる。</p>
+            
+            
+            <div class="bet-input-container">
+                <h3 style="color: #ff4500; margin-top: 0;">下のスライダーを動かして賭け金を決定せよ …！</h3>
+                <input type="range" id="bet-slider" min="1000000" max="10000000" step="1000000" value="1000000" style="width: 80%; accent-color: #ff4500;">
+                <div style="font-size: 1.6em; color: #ffd700; margin-top: 10px; font-weight: bold;" id="bet-slider-val">1,000,000 ペリカ</div>
+            </div>
+            
+            <button type="button" id="start-with-bet-btn" class="btn btn-gold">ゲーム開始</button>
+            <button type="button" id="startHomeBtnInitial" class="btn btn-gold" style="display: block; margin: 15px auto 0 auto;">ホームへ戻る</button>
+        </div>
+    </div>
     <button id="homeBtn">← ホームへ戻る</button>
 
     <div id="volume-control-pane">
@@ -22,19 +39,21 @@
     <h1>大富豪</h1>
     
     <div id="casino-header" style="max-width: 820px; margin: 10px auto; text-align: left; display: flex; justify-content: space-between; font-weight: bold; color: #ffd700; font-size: 1.2em; padding: 0 10px;">
-        <div>💰 所持金: <span id="player-pelika">10,000,000</span> ペリカ</div>
-        <div>🎲 現在の賭け金: <span id="current-bet-display">1,000,000</span> ペリカ</div>
+        <div> 所持金: <span id="player-pelika">10,000,000</span> ペリカ</div>
+        <div> 現在の賭け金: <span id="current-bet-display">1,000,000</span> ペリカ</div>
     </div>
 
     <div id="bet-setup-area" style="max-width: 820px; margin: 20px auto; padding: 20px; background: rgba(0,0,0,0.85); border: 2px solid #ff4500; border-radius: 14px; text-align: center;">
-        <h3 style="color: #ff4500; margin-top: 0;">ざわざわ… 賭け金（レート）を決定せよ …！</h3>
+        <h3 style="color: #ff4500; margin-top: 0;">ざわざわ… 賭け金を決定せよ …！</h3>
         <p style="color: #fff;">ギャンブラーなら、かける金額は決まっている！！！</p>
         <div style="margin: 20px 0;">
             <input type="range" id="bet-slider" min="1000000" max="10000000" step="1000000" value="1000000" style="width: 60%; accent-color: #ff4500;">
             <div style="font-size: 1.8em; color: #ffd700; margin-top: 10px; font-weight: bold;" id="bet-slider-val">1,000,000 ペリカ</div>
         </div>
-        <button id="start-with-bet-btn" style="padding: 10px 30px; font-size: 1.2em; background: linear-gradient(180deg, #ff4500 0%, #8b0000 100%); color: #fff; border: 2px solid #ffd700; border-radius: 8px; cursor: pointer; font-weight: bold;">勝負開始（レイズ…！）</button>
+        <button id="start-with-bet-btn" style="padding: 10px 30px; font-size: 1.2em; background: linear-gradient(180deg, #ff4500 0%, #8b0000 100%); color: #fff; border: 2px solid #ffd700; border-radius: 8px; cursor: pointer; font-weight: bold;">ゲーム開始</button>
+        <button id="startHomeBtn" style="display: block; margin: 15px auto 0 auto; padding: 10px 30px; font-size: 1.2em; background: linear-gradient(180deg, #ff4500 0%, #8b0000 100%); color: #fff; border: 2px solid #ffd700; border-radius: 8px; cursor: pointer; font-weight: bold;">ホームへ戻る</button>
     </div>
+    
     
     <div id="game-container">
         <div id="revolution-status" style="font-weight: bold; color: yellow; margin-bottom: 10px;"></div>
@@ -56,12 +75,13 @@
             <p id="msg"></p>
         </div>
 
-        <div id="zawa-zawa-overlay" class="zawa-zawa-hidden">
-            <div class="zawa top-left">ざわ…</div>
-            <div class="zawa top-right">ざわ…</div>
-            <div class="zawa bottom-left">ざわ…</div>
-            <div class="zawa bottom-right">ざわ…</div>
-        </div>
-    </div> <script src="script.js"></script>
+        </div> <div id="zawa-zawa-overlay" class="zawa-zawa-hidden">
+        <div class="zawazawa-text zawa-top-left">ざわ…<br>……ざわ</div>
+        <div class="zawazawa-text zawa-top-right">ざわ…<br>ざわ……</div>
+        <div class="zawazawa-text zawa-bottom-left">ざわ…<br>……ざわ</div>
+        <div class="zawazawa-text zawa-bottom-right">ざわ…<br>ざわ……</div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>

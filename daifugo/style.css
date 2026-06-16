@@ -1,5 +1,8 @@
 body {
-    font-family: 'Times New Roman', serif;
+    --font-serif: "Noto Serif JP", serif;
+    --font-display: "Oswald", sans-serif;
+
+    font-family: var(--font-serif); 
     text-align: center;
     background: linear-gradient(135deg, #3a0101 0%, #7a1a1a 60%, #2d0000 100%);
     color: #ffe8e0;
@@ -7,8 +10,7 @@ body {
     margin: 0;
     padding: 15px 0;
     background-attachment: fixed;
-}
-#game-container {
+}#game-container {
     max-width: 820px;
     margin: 0 auto;
     padding: 24px;
@@ -30,7 +32,7 @@ body {
     padding: 8px 12px;  /* ボタンの内側に少し余白を作って押しやすくする */
     cursor: pointer;    /* マウスを乗せたときに指マークにする */
     
-    /* お好みで見た目を整える用の装飾（不要なら消してもOKです） */
+    /* 装飾 */
     background-color: #333;
     color: #fff;
     border: 1px solid #555;
@@ -204,83 +206,206 @@ button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
 }
 
 #zawa-zawa-overlay {
-    position: fixed; /* 👈 fixed に戻して画面全体の端を基準にする */
+    position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    pointer-events: none; /* マウス操作を邪魔しない */
-    z-index: 2000; /* 最前面に表示 */
-    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 2000;
 }
 
+/* 非表示のときは一瞬で消えるようにする（余韻フェードアウトはJSのタイマーで制御） */
 #zawa-zawa-overlay.zawa-zawa-hidden {
-    opacity: 0;
     display: none;
+    opacity: 0;
 }
 
+/* 表示された瞬間、おどろおどろしいアニメーションを起動 */
 #zawa-zawa-overlay.zawa-zawa-visible {
-    opacity: 1;
     display: block;
+    animation: pokerFadeIn 3.5s forwards ease-in-out; 
+}
+
+/* 最初は薄め(0.15)から、じわじわと濃くなるアニメーション */
+@keyframes pokerFadeIn {
+    0% { opacity: 0; }
+    35% { opacity: 0.55; }  
+    65% { opacity: 0.55; }  
+    100% { opacity: 0; }
 }
 
 /* 各「ざわ」テキストの共通スタイル */
-.zawa {
+.zawazawa-text {
     position: absolute;
-    color: #ffd700; /* 金色 */
-    font-family: 'Times New Roman', serif;
+    color: #ffd700;
+    font-family: 'Noto Serif JP', 'Times New Roman', serif;
     font-weight: bold;
+    line-height: 1.2;
     letter-spacing: 0.1em;
-    /* 黒の太縁＋赤と金のフレア */
     text-shadow: 
         -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
-        0 0 25px #ff4500, 0 0 50px #b88a3a;
+        0 0 20px #ff4500, 0 0 40px #b88a3a, 0 0 60px #ff0000;
     pointer-events: none;
+    white-space: nowrap;
 }
 
-/* 🎲 傾き（回転）なしで、フルスクリーン時の「画面の本当の四隅」に配置 */
-.zawa.top-left { 
-    top: 24px; 
-    left: 30px; 
-    font-size: 7em;
-    animation: zawaHorizontalShake 0.15s infinite linear;
-}
-.zawa.top-right { 
-    top: 20px; 
-    right: 30px; 
+/* 配置 */
+.zawa-top-left { 
+    top: 130px; 
+    left: calc(50% - 410px - 1.6em); 
     font-size: 6.5em;
-    animation: zawaHorizontalShakeSlow 0.25s infinite linear;
-    animation-delay: 0.05s;
+    animation: zawaPokerShake 0.16s infinite linear;
 }
-.zawa.bottom-left { 
-    bottom: 24px; 
-    left: 30px; 
-    font-size: 7.5em;
-    animation: zawaHorizontalShakeSlow 0.22s infinite linear;
-    animation-delay: 0.1s;
+.zawa-top-right { 
+    top: 130px; 
+    right: calc(50% - 410px - 1.6em); 
+    font-size: 6.2em;
+    animation: zawaPokerShakeSlow 0.24s infinite linear;
+    animation-delay: 0.04s;
 }
-.zawa.bottom-right { 
-    bottom: 20px; 
-    right: 30px; 
-    font-size: 8.5em;
-    animation: zawaHorizontalShake 0.12s infinite linear;
+.zawa-bottom-left { 
+    bottom: 120px; 
+    left: calc(50% - 410px - 1.8em); 
+    font-size: 7em;
+    animation: zawaPokerShakeSlow 0.22s infinite linear;
+    animation-delay: 0.08s;
+}
+.zawa-bottom-right { 
+    bottom: 120px; 
+    right: calc(50% - 410px - 1.9em); 
+    font-size: 8em;
+    animation: zawaPokerShake 0.13s infinite linear;
     animation-delay: 0.02s;
 }
 
-/* 🎲 横揺れアニメーション（超高速・強烈） */
-@keyframes zawaHorizontalShake {
+/* 横揺れシェイク */
+@keyframes zawaPokerShake {
     0% { transform: translateX(0px); }
-    25% { transform: translateX(-8px); }
+    25% { transform: translateX(-6px); }
     50% { transform: translateX(0px); }
-    75% { transform: translateX(8px); }
+    75% { transform: translateX(6px); }
+    100% { transform: translateX(0px); }
+}
+@keyframes zawaPokerShakeSlow {
+    0% { transform: translateX(0px); }
+    25% { transform: translateX(-9px); }
+    50% { transform: translateX(0px); }
+    75% { transform: translateX(9px); }
     100% { transform: translateX(0px); }
 }
 
-/* 🎲 横揺れアニメーション（中速・大きく揺れる） */
-@keyframes zawaHorizontalShakeSlow {
-    0% { transform: translateX(0px); }
-    25% { transform: translateX(-12px); }
-    50% { transform: translateX(0px); }
-    75% { transform: translateX(12px); }
-    100% { transform: translateX(0px); }
+:root {
+  --font-serif: "Noto Serif JP", serif;
+  --font-display: "Oswald", sans-serif;
+  --gold: #d4a84b;
+  --gold-light: #f0d078;
+  --gold-dark: #8b6914;
+}
+
+/* 全画面を覆うスタート画面の土台 */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 4, 6, 0.95); /* 高級感のある暗がり */
+  z-index: 3000; /* ざわざわやゲーム画面より確実に手前に */
+  padding: 1rem;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* 非表示にするときのクラス */
+.screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(1.05);
+}
+
+/* 中央のカード型コンテナ */
+.start-card {
+  background: linear-gradient(145deg, #2a0f14 0%, #150507 100%);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(212, 168, 75, 0.15);
+  text-align: center;
+}
+
+.start-card h1 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--gold-light);
+  font-size: 2.8rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 15px rgba(240, 208, 120, 0.4);
+}
+
+.kaiji-quote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: #ff6b7a;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.desc {
+  color: #c9a8ad;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.bet-input-container {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(212, 168, 75, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem 1rem;
+  margin-bottom: 2rem;
+}
+
+
+.btn-gold {
+  display: inline-block;
+  width: 100%;
+  padding: 12px 24px;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold) 60%, var(--gold-dark) 100%);
+  color: #1a0a0c;
+  border: 1px solid var(--gold-light);
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-gold:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 20px rgba(240, 208, 120, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-gold:active {
+  transform: translateY(1px);
+}
+
+
+h1, 
+button, 
+#player-pelika, 
+#current-bet-display, 
+#bet-slider-val {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+#startHomeBtn:hover {
+    background: linear-gradient(180deg, #ff6324 0%, #a60000 100%) !important;
+    box-shadow: 0 0 15px rgba(255, 69, 0, 0.6);
 }
