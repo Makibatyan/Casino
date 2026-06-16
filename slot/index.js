@@ -7,6 +7,9 @@
    ===================================================== */
 // ─── 効果音生成（Web Audio API） ──────────────────────
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const se = {
+  decide: new Audio('決定ボタンを押す.mp3')
+};
 
 function playSound(type) {
   // ブラウザのオーディオコンテキストが停止している場合は再開
@@ -412,6 +415,13 @@ function snapReel(c) {
 
 function stopReel(idx) {
   if (!spinning || stopFlags[idx]) return;
+
+  // ★ STOP ボタン効果音
+  //playSound('decide');   // ← ここを追加（ファイル名は後で設定）
+// ★ mp3 再生
+  se.decide.currentTime = 0;
+  se.decide.play();
+  
   stopFlags[idx] = true;
   const btn = document.getElementById('stop' + idx);
   if (btn) btn.disabled = true;
