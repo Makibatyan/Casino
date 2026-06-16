@@ -283,8 +283,8 @@ function renderUI() {
 
     <div class="bet-row">
       <span class="bet-label">BET</span>
-      <button class="btn-small" onclick="changeBet(-10000000)">－1000万</button>
       <button class="btn-small" onclick="changeBet(-100000000)">－1億</button>
+      <button class="btn-small" onclick="changeBet(-10000000)">－1000万</button>
       <div class="bet-display" id="disp-bet2">${fmt(bet)}</div>
       <button class="btn-small" onclick="changeBet(10000000)">＋1000万</button>
       <button class="btn-small" onclick="changeBet(100000000)">＋1億</button>
@@ -503,8 +503,8 @@ function changeBet(delta) {
 
 function setBetMax() {
   // 💡 掛けれる額ベース最高峰：1000万ペリカ
-  bet = Math.max(100000, Math.min(cash, 10000000));
-  // bet = Math.max(100, Math.min(cash, 10000));
+  //bet = Math.max(100000, Math.min(cash, 10000000));
+  bet = cash;   // ← 所持金そのまま
   saveShared();
   updateStats();
 }
