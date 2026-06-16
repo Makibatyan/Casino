@@ -343,6 +343,8 @@ function canSelectCard(card) {
     return true;
 }
 
+let pendingBet = 0;
+
 function initGame() {
     gameState.deck = shuffleDeck(createDeck());
     gameState.playerHand = sortHand(gameState.deck.slice(0, 14));
@@ -350,10 +352,12 @@ function initGame() {
     gameState.lastPlayed = { rank: 0, count: 0 };
     gameState.selectedCards = [];
     gameState.isRevolution = false;
+    gameState.isElevenBack = false;
+    gameState.superRevolution = false;
+    gameState.lucky7 = false;
     gameState.isGameOver = false;
     gameState.skipNext = null;
     
-    // UIの初期化
     document.getElementById("play-btn").disabled = true; 
     document.getElementById("pass-btn").disabled = true; 
     const msgEl = document.getElementById("msg");
@@ -363,34 +367,85 @@ function initGame() {
     updateRevolutionStatus();
     renderHand();
 
-    // 【ここを調整】破産チェック（最低賭け金が1000万ペリカになったので、未満なら1億にリセット）
     if (!gameState.pelika || gameState.pelika < 10000000) {
         alert("破産……！地下強制労働行き……！\n\n（新たな軍資金として、1億ペリカを支給して復活します）");
-        gameState.pelika = 100000000; // 初期値を1億ペリカに
+        gameState.pelika = 100000000; 
         localStorage.setItem('bugging_cash', gameState.pelika);
     }
     
-    // 所持ペリカの画面表示
     document.getElementById("player-pelika").innerText = Number(gameState.pelika).toLocaleString();
 
-    // ベット用UIを表示し、メインのゲーム画面を半透明化
-    document.getElementById("bet-setup-area").style.display = "block";
-    document.getElementById("game-container").style.opacity = "0.5";
-    
-    // スライダーを1000万ペリカ単位で全額まで動かせるように設定
-    const maxBet = gameState.pelika; // 上限は現在の所持金すべて
-    const slider = document.getElementById("bet-slider");
-    
-    slider.min = "10000000";         //  最低賭け金を 1,000万 ペリカに設定
-    slider.max = String(maxBet);    //  上限は自分の所持金全額
-    slider.step = "10000000";       // つまみを動かしたときの単位を 1,000万 ペリカ刻みに変更
-    slider.value = "10000000";      // 初期値を 1,000万 ペリカに設定
-    
-    document.getElementById("bet-slider-val").innerText = "10,000,000"; 
-    document.getElementById("current-bet-display").innerText = "10,000,000";
+    // 💡 【修正】スライダー用の初期化コードは全削除し、チップ用の変数をゼロリセット
+    pendingBet = 0;
+    document.getElementById("bet-slider-val").innerText = "0 ペリカ"; 
+    document.getElementById("current-bet-display").innerText = "0";
 
-    betBgm.play().catch(e => console.log("BGM再生エラー（ユーザー操作前）:", e));
+    // 「ゲーム開始」ボタンを最初は無効化（0ペリカで開始できないようにする）
+    document.getElementById("start-with-bet-btn").disabled = true;
+
+    betBgm.play().catch(e => console.log("BGM再生エラー:", e));
 }
+
+// 💡 【追加】チップボタンのクリックイベントを設定する
+document.querySelectorAll(".chip-btn").forEach(button => {
+    button.onclick = () => {
+        const value = button.getAttribute("data-value");
+        
+        if (value === "allin") {
+            // 全賭け：所持金すべてをセット
+            pendingBet = gameState.pelika;
+        } else {
+            // 通常チップ：ポチポチ押すたびに加算
+            const amount = parseInt(value, 10);
+            if (pendingBet + amount <= gameState.pelika) {
+                pendingBet += amount;
+            } else {
+                // 所持金を超える場合は自動的にオールイン状態にする
+                pendingBet = gameState.pelika;
+                showMessage("これ以上賭けられません…！全賭けになりますっ…！");
+            }
+        }
+        
+        // 画面の数値を更新
+        document.getElementById("bet-slider-val").innerText = pendingBet.toLocaleString() + " ペリカ";
+        
+        // 1000万以上ベットされていれば開始ボタンを有効化
+        document.getElementById("start-with-bet-btn").disabled = (pendingBet < 10000000);
+    };
+});
+
+// 💡 【追加】リセットボタンの処理
+document.getElementById("clear-bet-btn").onclick = () => {
+    pendingBet = 0;
+    document.getElementById("bet-slider-val").innerText = "0 ペリカ";
+    document.getElementById("start-with-bet-btn").disabled = true;
+};
+
+document.getElementById("start-with-bet-btn").onclick = () => {
+    if (pendingBet < 10000000) return; // 最低賭け金未満なら開始不可
+
+    raiseSound.play().catch(e => console.error(e));
+    
+    // 決定した賭け金を反映
+    gameState.currentBet = pendingBet;
+    document.getElementById("current-bet-display").innerText = gameState.currentBet.toLocaleString();
+    
+    betBgm.pause();
+    betBgm.currentTime = 0;
+    gameBgm.play().catch(e => console.error(e));
+
+    document.getElementById("play-btn").disabled = false;
+    document.getElementById("pass-btn").disabled = false;
+    showMessage("ゲーム開始……！ざわざわ……");
+
+    const startScreen = document.getElementById("start-screen");
+    if (startScreen) {
+        startScreen.classList.add("hidden");
+        setTimeout(() => {
+            startScreen.style.display = "none";
+        }, 400);
+    }
+};
 
 function canPlayCards(cards) {
     const mainCard = getMainCard(cards);
@@ -814,72 +869,9 @@ document.getElementById('homeBtn').addEventListener('click', () => {
     window.location.href = '../home/home.html'; 
 });
 
-//  ベットスライダーのリアルタイム表示変更
-document.getElementById("bet-slider").oninput = (e) => {
-    const val = parseInt(e.target.value);
-    document.getElementById("bet-slider-val").innerText = val.toLocaleString();
-};
 
-// 「ゲーム開始」ボタンを押したときの処理
-document.getElementById("start-with-bet-btn").onclick = () => {
-    const selectedBet = parseInt(document.getElementById("bet-slider").value);
 
-    raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
 
-    gameState.currentBet = selectedBet;
-    document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString() + " ペリカ";
-    
-    // ベット画面を隠してゲーム画面をアクティブにする
-    document.getElementById("bet-setup-area").style.display = "none";
-    document.getElementById("game-container").style.opacity = "1";
-    
-    // ゲーム用ボタンを有効化して勝負スタート！
-    document.getElementById("play-btn").disabled = false;
-    document.getElementById("pass-btn").disabled = false;
-    showMessage("ゲーム開始……！ざわざわ……");
-};
-
-if (document.getElementById("bet-slider")) {
-    document.getElementById("bet-slider").oninput = (e) => {
-        const val = parseInt(e.target.value) || 10000000;
-        document.getElementById("bet-slider-val").innerText = val.toLocaleString() + " ペリカ";
-    };
-}
-
-// 💰 「ゲーム開始」ボタンの処理
-if (document.getElementById("start-with-bet-btn")) {
-    document.getElementById("start-with-bet-btn").onclick = () => {
-        const selectedBet = parseInt(document.getElementById("bet-slider").value) || 10000000;
-        
-        raiseSound.play().catch(e => console.error("効果音再生エラー:", e));
-        
-        gameState.currentBet = selectedBet;
-        document.getElementById("current-bet-display").innerText = selectedBet.toLocaleString();
-        
-        betBgm.pause();
-        betBgm.currentTime = 0;
-
-        gameBgm.play().catch(e => console.error("BGM再生エラー:", e));
-
-        document.getElementById("bet-setup-area").style.display = "none";
-        document.getElementById("game-container").style.opacity = "1";
-        
-        document.getElementById("play-btn").disabled = false;
-        document.getElementById("pass-btn").disabled = false;
-        showMessage("ゲーム開始……！ざわざわ……");
-
-        //スタート画面に「hidden」クラスを付与してフェードアウトさせる
-        const startScreen = document.getElementById("start-screen");
-        if (startScreen) {
-            startScreen.classList.add("hidden");
-            
-            // アニメーション（0.4秒）が終わった後に完全にDOMから非表示(display:none)にする
-            setTimeout(() => {
-                startScreen.style.display = "none";
-            }, 400);
-        }
-    };
-}
 
 // ゲーム終了後に「もう一度」か「退出」かを選ばせるUIを生成する関数
 function showEndGameChoices() {
